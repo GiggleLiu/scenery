@@ -2,3 +2,4 @@
 
 #import "src/structure.typ": structure
 #import "src/crystal.typ": crystal, crystal-group
+#import "src/prototypes.typ"
