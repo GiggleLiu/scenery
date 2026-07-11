@@ -15,3 +15,6 @@
 
 // Depth-sort (pure) and the cetz painter's-algorithm backend.
 #import "src/render.typ": sort-prims, scene-group, render-scene
+
+// Annotation furniture: axes triad, legend, colorbar (cetz draw commands).
+#import "src/annotate.typ": axes-triad, legend, colorbar
