@@ -7,4 +7,4 @@ license = "MIT"
 description = "2D/3D scene rendering for Typst: typed primitives, orthographic projection, depth-sorted CeTZ output"
 repository = "https://github.com/GiggleLiu/scenery"
 compiler = "0.14.0"
-exclude = ["tests/*"]
+exclude = ["tests/*", "manual.typ", "manual.pdf"]
