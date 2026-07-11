@@ -11,3 +11,8 @@
 // High-symmetry k-points and recommended k-paths per Setyawan-Curtarolo (2010),
 // with parameter-dependent extended-Bravais variant selection.
 #import "src/kpath.typ": kpoints, kpath, kpath-data
+
+// User-facing figure layer: the textbook BZ drawing (translucent polyhedron +
+// labelled k-points + traced path) and a flat band-path panel, all assembled
+// from scenery primitives.
+#import "src/figure.typ": bz-figure, bz-group, band-panel, band-axis, pretty-klabel
