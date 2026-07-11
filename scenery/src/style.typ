@@ -107,7 +107,7 @@
   p.at(calc.rem(calc.rem(i, p.len()) + p.len(), p.len()))
 }
 
-/// Brightness in `[0.35, 1]` for a flat-shaded polygon: `max(0.35, n · light)`
+/// Brightness in `[0.55, 1]` for a flat-shaded polygon: `0.55 + 0.45·|n · light|`
 /// where `n` is the polygon's face normal and `light` the world light
 /// direction. Degenerate polygons (fewer than three points or collinear) return
 /// full brightness.
@@ -120,5 +120,8 @@
   let n = vcross(vsub(pts.at(1), pts.at(0)), vsub(pts.at(2), pts.at(0)))
   let ln = vlen(n)
   if ln < 1e-9 { return 1.0 }
-  calc.max(0.35, vdot(vscale(n, 1 / ln), vnorm(light)))
+  // |n·light| is winding-agnostic (hull/mesh faces have no guaranteed
+  // orientation); the [0.55, 1] remap keeps shaded solids luminous instead of
+  // crushing side-facing facets toward black
+  0.55 + 0.45 * calc.abs(vdot(vscale(n, 1 / ln), vnorm(light)))
 }
