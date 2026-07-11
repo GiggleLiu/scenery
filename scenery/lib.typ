@@ -6,3 +6,6 @@
 
 // Typed primitives, affine transforms and scene assembly (pure data, no cetz).
 #import "src/scene.typ": sphere, seg, edge, arrow, face, mesh, label, affine, translate, scale, group, build-scene
+
+// Shape generators: convex hull faces and parametric solid meshes.
+#import "src/shape.typ": hull-faces, uv-sphere, cylinder, cone, prism
