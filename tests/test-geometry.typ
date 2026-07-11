@@ -74,3 +74,18 @@ Geometry OK
 // explicit Na-Cl cutoff
 #assert(find-bonds(shown, ((elements: ("Na", "Cl"), max: 2.9),)).len() == 54)
 Bonds OK
+
+#import "/src/geometry.typ": find-polyhedra
+
+#let sto = structure(
+  spacegroup: 221, lattice: (a: 3.905),
+  sites: ((element: "Sr", wyckoff: "a"), (element: "Ti", wyckoff: "b"), (element: "O", wyckoff: "c")),
+)
+#let sshown = display-atoms(sto)
+#let sbonds = find-bonds(sshown, ((elements: ("Ti", "O"), max: 2.2),))
+#let polys = find-polyhedra(sshown, sbonds, ("Ti",))
+// exactly one Ti displayed (cell center), octahedrally coordinated
+#assert(polys.len() == 1, message: "got " + str(polys.len()))
+#assert(polys.first().faces.len() == 8, message: "octahedron has 8 faces, got " + str(polys.first().faces.len()))
+#assert(polys.first().faces.all(f => f.len() == 3))
+Polyhedra OK

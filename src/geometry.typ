@@ -1,6 +1,6 @@
 // Geometry for rendering: supercell replication, boundary images, and the
 // unit-cell wireframe. Pure/cetz-free; consumes a structure value (Task 7).
-#import "linalg.typ": vadd, vscale, vsub, vlen
+#import "linalg.typ": vadd, vscale, vsub, vlen, vcross, vdot, vnorm
 #import "lattice.typ": frac-to-cart
 #import "data.typ": element-info
 
@@ -105,6 +105,57 @@
           out.push((i: i, j: j))
         }
       }
+    }
+  }
+  out
+}
+
+/// Convex hull of <= ~12 points via unique-plane enumeration.
+/// Returns faces as polygons (vertices ordered around the outward normal).
+#let _hull-faces(pts) = {
+  let n = pts.len()
+  let faces = ()
+  let seen = ()
+  for i in range(n) {
+    for j in range(i + 1, n) {
+      for k in range(j + 1, n) {
+        let nrm = vcross(vsub(pts.at(j), pts.at(i)), vsub(pts.at(k), pts.at(i)))
+        if vlen(nrm) < 1e-8 { continue }
+        let nrm = vnorm(nrm)
+        let d = vdot(nrm, pts.at(i))
+        let sides = pts.map(p => vdot(nrm, p) - d)
+        if sides.any(s => s > 1e-6) and sides.any(s => s < -1e-6) { continue }
+        let (nrm, d) = if sides.any(s => s > 1e-6) { (vscale(nrm, -1), -d) } else { (nrm, d) }
+        let key = repr(nrm.map(x => calc.round(x, digits: 5)) + (calc.round(d, digits: 5),))
+        if key in seen { continue }
+        seen.push(key)
+        let fpts = pts.filter(p => calc.abs(vdot(nrm, p) - d) < 1e-6)
+        // order around centroid
+        let c = vscale(fpts.fold((0.0, 0.0, 0.0), vadd), 1 / fpts.len())
+        let u = vnorm(vsub(fpts.first(), c))
+        let v = vcross(nrm, u)
+        faces.push(fpts.sorted(key: p => {
+          let r = vsub(p, c)
+          calc.atan2(vdot(r, u), vdot(r, v)).rad()
+        }))
+      }
+    }
+  }
+  faces
+}
+
+/// Coordination polyhedra around displayed atoms of the given elements.
+#let find-polyhedra(shown, bonds, elements) = {
+  let out = ()
+  for (ci, c) in shown.enumerate() {
+    if c.element not in elements { continue }
+    let nbrs = ()
+    for b in bonds {
+      if b.i == ci { nbrs.push(shown.at(b.j).cart) }
+      if b.j == ci { nbrs.push(shown.at(b.i).cart) }
+    }
+    if nbrs.len() >= 4 {
+      out.push((center: ci, faces: _hull-faces(nbrs)))
     }
   }
   out
