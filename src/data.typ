@@ -14,3 +14,15 @@
     r-atom: e.r-atom,
   )
 }
+
+#let _sg = json("/data/spacegroups.json")
+#let _lg = json("/data/layergroups.json")
+
+#let group-data(kind, number) = {
+  let (table, max, name) = if kind == "3d" { (_sg, 230, "space group") } else { (_lg, 80, "layer group") }
+  assert(
+    type(number) == int and number >= 1 and number <= max,
+    message: "wyckoff: " + name + " number must be 1.." + str(max) + ", got " + repr(number),
+  )
+  table.at(str(number))
+}
