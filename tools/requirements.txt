@@ -1,0 +1,4 @@
+numpy
+spglib
+pymatgen
+pyxtal
