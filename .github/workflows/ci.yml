@@ -18,6 +18,9 @@ jobs:
         with: {typst-version: '0.14.2'}
       - name: Build local @preview package tree
         run: make pkgroot
+      - name: Check markdown links
+        if: matrix.package == 'scenery'
+        run: make check-links
       - name: Run tests
         run: make -C ${{ matrix.package }} test
       - name: Compile examples

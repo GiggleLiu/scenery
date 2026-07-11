@@ -25,7 +25,10 @@ pkgroot:
 	  echo "linked @preview/$$pkg:0.1.0 -> $$pkg/"; \
 	done
 
-test: pkgroot
+check-links:
+	python3 tools/check_links.py
+
+test: pkgroot check-links
 	@for pkg in $(PACKAGES); do \
 	  echo "==> $$pkg: tests"; \
 	  $(MAKE) -C $$pkg test || exit 1; \
