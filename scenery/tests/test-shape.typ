@@ -39,8 +39,13 @@ Hull OK
 // --- parametric solids: mesh shape and index validity ------------------------
 #let sph = uv-sphere((0, 0, 0), 1, segments: 12, rings: 6)
 #assert(sph.kind == "mesh")
-#assert(sph.vertices.len() == 12 * 7, message: "(rings+1) x segments vertices")
-#assert(sph.faces.len() == 12 * 6, message: "rings x segments quads")
+#assert(sph.vertices.len() == 2 + 12 * 5, message: "two poles + (rings-1) x segments vertices")
+#assert(sph.faces.len() == 12 * 6, message: "two pole fans + (rings-2) x segments quads")
+// regression: no face may repeat a vertex index (degenerate pole quads shaded
+// as a pinwheel before the poles became shared fan vertices)
+#assert(sph.faces.all(f => f.dedup().len() == f.len()), message: "no degenerate faces")
+// every vertex must be on the sphere
+#assert(sph.vertices.all(v => calc.abs(calc.sqrt(v.map(x => x * x).sum()) - 1.0) < 1e-9))
 
 #let cyl = cylinder((0, 0, 0), (0, 0, 2), 1, segments: 8)
 #assert(cyl.kind == "mesh")
