@@ -1,6 +1,6 @@
 // Lattice parameters, vectors, and fractional-to-cartesian conversion.
 // Per-crystal-system validation + completion; cetz-free (imports only linalg).
-#import "linalg.typ": vscale, vadd
+#import "@preview/scenery:0.1.0": vscale, vadd
 
 #let _free-params = (
   triclinic: ("a", "b", "c", "alpha", "beta", "gamma"),
