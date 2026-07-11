@@ -1,8 +1,9 @@
 tools/.venv/
-tests/*.pdf
-tests/*.png
-examples/*.pdf
+_pkgroot/
+**/tests/*.pdf
+**/tests/*.png
+**/examples/*.pdf
+**/examples/*.png
 *.pdf
-!manual.pdf
 __pycache__/
 .superpowers/

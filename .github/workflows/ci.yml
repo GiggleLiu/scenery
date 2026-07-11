@@ -5,10 +5,31 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [scenery, wyckoff]
+    env:
+      # Resolve @preview/<pkg>:<version> imports to the local checkout.
+      TYPST_PACKAGE_PATH: ${{ github.workspace }}/_pkgroot
     steps:
       - uses: actions/checkout@v4
       - uses: typst-community/setup-typst@v4
         with: {typst-version: '0.14.2'}
-      - run: make test
-      - run: |
-          for f in examples/*.typ; do typst compile --root . "$f" "/tmp/$(basename "${f%.typ}").png"; done
+      - name: Build local @preview package tree
+        run: make pkgroot
+      - name: Run tests
+        run: make -C ${{ matrix.package }} test
+      - name: Compile examples
+        run: make -C ${{ matrix.package }} examples
+      # The manual compiles on every PR and push as a test (its figures exercise
+      # the whole public API); it is only uploaded as an artifact on main.
+      - name: Compile manual (scenery)
+        if: matrix.package == 'scenery'
+        run: make -C scenery manual
+      - name: Upload manual PDF
+        if: matrix.package == 'scenery' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: scenery-manual
+          path: scenery/manual.pdf
