@@ -61,14 +61,15 @@
     color: black,
     size: 7pt,
     weight: "bold",
+    text-anchor: none,
   ),
 )
 
 /// Structural (geometry) fields carried by a primitive. Everything else on a
 /// primitive dictionary is treated as a styling hook.
 #let _STRUCT = (
-  "kind", "center", "r", "a", "b", "from", "to", "pts", "vertices", "faces",
-  "at", "text", "depth",
+  "kind", "name", "anchor", "center", "r", "a", "b", "from", "to", "pts",
+  "vertices", "faces", "at", "text", "depth",
 )
 
 /// The styling hooks on a primitive: its named fields minus structural geometry.

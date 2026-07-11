@@ -44,6 +44,9 @@
   vcross: scn.vcross, vlen: scn.vlen, vnorm: scn.vnorm, mvec: scn.mvec, lerp: scn.lerp,
   // camera
   camera: scn.camera, camera-2d: scn.camera-2d, project: scn.project,
+  // named coordinates
+  anchor-ref: scn.anchor-ref, resolve-scene: scn.resolve-scene,
+  anchor-of: scn.anchor-of, anchor-names: scn.anchor-names,
   // primitives + assembly
   sphere: scn.sphere, seg: scn.seg, edge: scn.edge, arrow: scn.arrow,
   face: scn.face, mesh: scn.mesh, label: scn.label, build-scene: scn.build-scene,
@@ -252,8 +255,9 @@ render-scene(
 = Primitives <sec-prims>
 
 scenery has seven primitive kinds. Each is a plain constructor returning a tagged
-dictionary; extra named arguments (`color`, `w`, `head`, `fill-opacity`, ...) are
-styling hooks stored verbatim on the primitive (see @sec-style).
+dictionary. The optional `name:` is structural; other named arguments (`color`,
+`w`, `head`, `fill-opacity`, ...) are styling hooks stored verbatim on the
+primitive (see @sec-style).
 
 #table(
   columns: (auto, 1fr),
@@ -301,14 +305,54 @@ Points may be written as 2- or 3-vectors: a 2-vector `(x, y)` is lifted to
 `(x, y, 0)`, which is what lets the identical constructors serve `camera-2d()`
 scenes (@sec-cameras).
 
+= Named objects & anchors <sec-anchors>
+
+Every primitive may have a unique `name:`. A string of the form
+`"object.anchor"` can then be used in primitive coordinate parameters: sphere
+centres, line endpoints, face/mesh vertices, and label attachment points.
+References may point forward: `build-scene` records the complete registry, and
+resolution occurs for the selected camera before projection. Sphere compass
+anchors are on the visible, camera-relative silhouette. Shape-generator inputs
+and affine transform parameters themselves remain concrete vectors.
+
+#example(
+  "let scene = build-scene(
+  // The bond deliberately comes first: forward references are valid.
+  seg(\"a.east\", \"b.west\", name: \"bond\", color: luma(85)),
+  label(\"bond.mid\", box(fill: white, inset: 1pt, radius: 1pt)[d], text-anchor: \"south\"),
+  sphere((0, 0, 0), 0.6, name: \"a\", color: rgb(\"#4477aa\")),
+  sphere((2, 0, 0), 0.6, name: \"b\", color: rgb(\"#cc8963\")),
+)
+
+render-scene(scene, camera(azimuth: 30deg, elevation: 20deg), width: 5cm)",
+)
+
+#block(breakable: false, table(
+    columns: (auto, auto, 1fr),
+    stroke: none,
+    inset: (x: 0pt, y: 3pt),
+    align: (left + top, left + top, left + top),
+    [*Primitive*], [*Default*], [*Named anchors*],
+    [`sphere`], [`center`], [`center`; compass directions; angles via `anchor-ref`],
+    [`seg`, `edge`, `arrow`], [`mid`], [`start`, `mid`, `end`],
+    [`face`], [`centroid`], [`centroid`, `vertex-0`, `vertex-1`, ...],
+    [`mesh`], [`center`], [`center`, `vertex-0`, `vertex-1`, ...],
+    [`label`], [`center`], [its attachment-point `center`],
+  ))
+
+Use `anchor-ref("a", anchor: 30deg)` for an angular sphere border anchor.
+`anchor-of(scene, camera, "bond.mid")` returns the corresponding concrete 3D
+point, while `anchor-names` lists an object's named anchors. Affine groups also
+work on references: their transform is applied after the reference resolves.
+
 = Transforms & groups
 
 A transform is an affine map `p #sym.arrow.bar matrix · p + offset`. `translate(v)`
 and `scale(s)` are the two common shorthands; `affine(matrix:, offset:)` is the
 general form. `group(transform, ..prims)` applies one transform to a whole bag of
 primitives (and nested groups), returning a flat array that `build-scene` happily
-absorbs. Groups nest and compose left-to-right, evaluating eagerly on concrete
-points.
+absorbs. Groups nest and compose left-to-right. Concrete points transform
+eagerly; named references defer the same transforms until resolution.
 
 Here one "molecule" is built once, then `group`-translated into a row and
 `group`-scaled to shrink the last copy. Note that `scale` moves _positions_ only:
@@ -582,21 +626,25 @@ anything. `unit:` sets canvas units per scene unit.
 
   // a depth-sorted scenery scene, embedded
   let scene = build-scene(
-    sphere((0,0,0), 0.55, color: palette-color(default-theme, 0)),
-    sphere((2.2,0,0), 0.55, color: palette-color(default-theme, 1)),
-    seg((0,0,0), (2.2,0,0)),
+    sphere((0,0,0), 0.55, name: \"a\", color: palette-color(default-theme, 0)),
+    sphere((2.2,0,0), 0.55, name: \"b\", color: palette-color(default-theme, 1)),
+    seg(\"a.east\", \"b.west\", name: \"bond\"),
   )
   scene-group(
     scene, camera(azimuth: 30deg, elevation: 20deg), unit: 1,
   )
 
   // more cetz on top
-  content((2, 2.6), text(9pt)[a scene inside a canvas])
+  content(\"bond.mid\", box(fill: white, inset: 2pt, radius: 1pt,
+    text(9pt)[named anchor]), anchor: \"south\")
   line((0, -1), (2.2, -1), mark: (end: \">\"), stroke: luma(120))
 })",
   columns: (1.15fr, 1fr),
 )
 
+`scene-group` registers one anchor-only CeTZ group per logical named object, so
+later CeTZ commands in the canvas can use `"a.east"` or `"bond.mid"`. The name
+remains singular even if occlusion splits the rendered bond into several pieces.
 Because `scene-group` is just CeTZ commands, the reverse also holds: scenery's own
 `axes-triad`, `legend` and `colorbar` are callable directly inside any canvas when
 you want finer placement than the `render-scene` options give.
@@ -609,12 +657,10 @@ scenery is deliberately scoped. Know these four boundaries:
   parallel and there is no foreshortening. This is the right projection for
   diagrams and technical figures, and the deliberate scope for now.
 
-/ Painter's algorithm: Primitives sort as whole units by a single depth key
-  (spheres by centre, segments by midpoint, faces by centroid; meshes explode to
-  per-face polygons that sort independently). _Intersecting_ translucent faces can
-  therefore occasionally layer in the wrong order. Non-intersecting scenes (the
-  common case) sort correctly; opaque scenes are unaffected. There is no
-  hidden-surface removal or z-buffer --- depth order alone resolves occlusion.
+/ Painter's algorithm: Faces and other unsplit primitives use one depth key.
+  _Intersecting_ translucent faces can therefore occasionally layer in the wrong
+  order. Segments and edges are fragmented against opaque sphere silhouettes,
+  but arbitrary polygon intersections are not split and there is no z-buffer.
 
 / Practical size cap: Everything runs in pure Typst, so compile time grows with
   primitive count. A few hundred to ~2,000 primitives is comfortable; tens of
@@ -645,14 +691,21 @@ name (@sec-prims explains why not `*`).
 }
 
 #api("Scene construction", (
-  [`sphere(center, r, ..style)`], [Shaded ball.],
-  [`seg(a, b, ..style)`], [Thick round-capped segment; width `w` in scene units.],
-  [`edge(a, b, ..style)`], [Thin wireframe edge; absolute stroke `width`.],
-  [`arrow(from, to, ..style)`], [Arrow with a scaled head (`head`, `w`).],
-  [`face(pts, ..style)`], [Filled planar polygon; `fill-opacity` for translucency.],
-  [`mesh(vertices, faces, ..style)`], [Indexed polygon mesh; faces sort per-face.],
-  [`label(at, text, ..style)`], [Text anchored at a 3D point, painted on top.],
-  [`build-scene(..prims)`], [Flattens primitives/groups into scene data `(prims, bbox)`.],
+  [`sphere(center, r, name:, ..style)`], [Shaded ball.],
+  [`seg(a, b, name:, ..style)`], [Thick round-capped segment; width `w` in scene units.],
+  [`edge(a, b, name:, ..style)`], [Thin wireframe edge; absolute stroke `width`.],
+  [`arrow(from, to, name:, ..style)`], [Arrow with a scaled head (`head`, `w`).],
+  [`face(pts, name:, ..style)`], [Filled planar polygon; `fill-opacity` for translucency.],
+  [`mesh(vertices, faces, name:, ..style)`], [Indexed polygon mesh; faces sort per-face.],
+  [`label(at, text, name:, ..style)`], [Text at a 3D point; `text-anchor` controls alignment.],
+  [`build-scene(..prims)`], [Flattens primitives/groups and validates object names.],
+))
+
+#api("Named coordinates", (
+  [`anchor-ref(name, anchor:)`], [Explicit reference, including angular sphere anchors.],
+  [`resolve-scene(scene, camera)`], [Resolves references to concrete geometry.],
+  [`anchor-of(scene, camera, reference)`], [Returns a concrete 3D anchor point.],
+  [`anchor-names(scene, camera, name)`], [Lists an object's named anchors.],
 ))
 
 #api("Transforms", (
@@ -679,7 +732,7 @@ name (@sec-prims explains why not `*`).
 #api("Rendering", (
   [`render-scene(scene, camera, width:, theme:, axes:, legend:, colorbar:)`],
   [Renders a scene to content at a target on-page width.],
-  [`scene-group(scene, camera, ..)`], [Raw CeTZ draw commands for embedding in a canvas.],
+  [`scene-group(scene, camera, ..)`], [Raw CeTZ commands with logical named anchors.],
   [`sort-prims(prims, camera)`], [Pure depth-sort (far-to-near); meshes exploded to faces.],
 ))
 

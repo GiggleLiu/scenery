@@ -17,6 +17,7 @@
 #import "camera.typ": project
 #import "linalg.typ": vadd, vscale
 #import "style.typ": default-theme, resolve-style, face-brightness
+#import "anchors.typ": resolve-scene
 
 // --- sphere shading ---------------------------------------------------------
 
@@ -312,6 +313,7 @@
       kind: k,
       pos: _screen(camera, unit, p.at),
       body: text(size: st.size, fill: st.color, weight: st.weight, p.text),
+      anchor: st.at("text-anchor", default: none),
     )
   } else {
     panic("unknown primitive kind: " + k)
@@ -368,6 +370,7 @@
   legend: none,
   colorbar: none,
 ) = {
+  let scene = resolve-scene(scene, camera)
   // All geometry resolved to plain data before the wildcard import, so the loop
   // below cannot be tripped by cetz re-exporting `project`/`scale`.
   let records = sort-prims(_clip-lines(scene.prims, camera), camera)
@@ -376,6 +379,16 @@
   let sb = _projected-screen-bbox(camera, scene.bbox)
   let (x0, y0, x1, y1) = (sb.at(0) * unit, sb.at(1) * unit, sb.at(2) * unit, sb.at(3) * unit)
   import cetz.draw: *
+  // Register one anchor-only CeTZ group per logical scenery object. Geometry is
+  // still emitted anonymously below because depth clipping can split one object
+  // into multiple draw records.
+  for (object-name, object-anchors) in scene.anchors {
+    group(name: object-name, {
+      for (anchor-name, point) in object-anchors {
+        anchor(anchor-name, _screen(camera, unit, point))
+      }
+    })
+  }
   for r in records {
     if r.kind == "sphere" {
       circle(r.pos, radius: r.radius, fill: _sphere-gradient(r.color), stroke: r.stroke)
@@ -386,7 +399,7 @@
     } else if r.kind == "face" {
       line(..r.pts, close: true, fill: r.fill, stroke: r.stroke)
     } else if r.kind == "label" {
-      content(r.pos, r.body)
+      content(r.pos, r.body, anchor: r.anchor)
     }
   }
   // Annotation furniture, drawn on top of the scene. Deferred import breaks the
@@ -450,6 +463,7 @@
   legend: none,
   colorbar: none,
 ) = {
+  let scene = resolve-scene(scene, camera)
   let w = _projected-width(camera, scene.bbox)
   let unit = if w > 0 { (width / 1cm) / w } else { 1.0 }
   cetz.canvas(length: 1cm, scene-group(

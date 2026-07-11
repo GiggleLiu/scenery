@@ -2,6 +2,7 @@
 
 TYPST = typst compile --root .
 TESTS := $(wildcard tests/test-*.typ)
+ERROR_TESTS := $(wildcard tests/errors/*.typ)
 EXAMPLES := $(wildcard examples/*.typ)
 
 all: test
@@ -18,6 +19,14 @@ test: manual
 	@for t in $(TESTS); do \
 	  echo "== $$t"; \
 	  $(TYPST) $$t $${t%.typ}.pdf || exit 1; \
+	done
+	@for t in $(ERROR_TESTS); do \
+	  echo "== $$t (expected error)"; \
+	  expected=$$(sed -n 's|^// expected: ||p' $$t); \
+	  if [ -z "$$expected" ]; then echo "missing // expected: marker in $$t"; exit 1; fi; \
+	  out=$$($(TYPST) $$t /tmp/scenery-expected-error.pdf 2>&1); status=$$?; \
+	  if [ $$status -eq 0 ]; then echo "expected compilation to fail"; exit 1; fi; \
+	  echo "$$out" | grep -F -- "$$expected" >/dev/null || { echo "$$out"; exit 1; }; \
 	done
 	@echo "All tests passed!"
 

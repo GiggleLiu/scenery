@@ -12,7 +12,7 @@
 // terse `c`. Extra named arguments to any constructor are styling hooks (colour,
 // stroke, width, ...) and are stored verbatim on the primitive.
 
-#import "linalg.typ": vadd, mvec
+#import "coordinate.typ": normalize-coordinate, coordinate-is-concrete, transform-coordinate
 
 /// Normalises a point to three components: a 2-vector `(x, y)` becomes
 /// `(x, y, 0)`. Every primitive constructor runs its points through this so that
@@ -20,19 +20,15 @@
 ///
 /// - p (vector): A 2- or 3-component point.
 /// -> vector
-#let _pt(p) = {
-  assert(
-    type(p) == array and p.len() in (2, 3),
-    message: "point must be a 2- or 3-component array, got " + repr(p),
-  )
-  if p.len() == 2 { (p.at(0), p.at(1), 0) } else { p }
-}
+#let _pt(p) = normalize-coordinate(p)
 
 /// Fails if a `..sink` captured stray positional arguments.
 #let _no-pos(sink, who) = assert(
   sink.pos().len() == 0,
   message: who + " takes no positional styling arguments, got " + repr(sink.pos()),
 )
+
+#let _with-name(p, name) = if name == none { p } else { (..p, name: name) }
 
 // --- primitive constructors -------------------------------------------------
 
@@ -42,9 +38,9 @@
 /// - r (float): Radius.
 /// - ..style (any): Styling hooks (e.g. `color`) stored on the primitive.
 /// -> dictionary
-#let sphere(center, r, ..style) = {
+#let sphere(center, r, ..style, name: none) = {
   _no-pos(style, "sphere")
-  (kind: "sphere", center: _pt(center), r: r, ..style.named())
+  _with-name((kind: "sphere", center: _pt(center), r: r, ..style.named()), name)
 }
 
 /// A drawn segment (e.g. a bond) from `a` to `b`.
@@ -53,9 +49,9 @@
 /// - b (vector): End point (2- or 3-vector).
 /// - ..style (any): Styling hooks (e.g. `color`, `w`).
 /// -> dictionary
-#let seg(a, b, ..style) = {
+#let seg(a, b, ..style, name: none) = {
   _no-pos(style, "seg")
-  (kind: "seg", a: _pt(a), b: _pt(b), ..style.named())
+  _with-name((kind: "seg", a: _pt(a), b: _pt(b), ..style.named()), name)
 }
 
 /// A wireframe edge from `a` to `b` (e.g. a unit-cell edge).
@@ -64,9 +60,9 @@
 /// - b (vector): End point (2- or 3-vector).
 /// - ..style (any): Styling hooks.
 /// -> dictionary
-#let edge(a, b, ..style) = {
+#let edge(a, b, ..style, name: none) = {
   _no-pos(style, "edge")
-  (kind: "edge", a: _pt(a), b: _pt(b), ..style.named())
+  _with-name((kind: "edge", a: _pt(a), b: _pt(b), ..style.named()), name)
 }
 
 /// An arrow from `from` to `to`.
@@ -75,9 +71,9 @@
 /// - to (vector): Head point (2- or 3-vector).
 /// - ..style (any): Styling hooks (e.g. `color`, `w`, `head`).
 /// -> dictionary
-#let arrow(from, to, ..style) = {
+#let arrow(from, to, ..style, name: none) = {
   _no-pos(style, "arrow")
-  (kind: "arrow", from: _pt(from), to: _pt(to), ..style.named())
+  _with-name((kind: "arrow", from: _pt(from), to: _pt(to), ..style.named()), name)
 }
 
 /// A filled planar polygon through the ordered points `pts`.
@@ -85,9 +81,9 @@
 /// - pts (array): Ordered polygon vertices (each a 2- or 3-vector).
 /// - ..style (any): Styling hooks (e.g. `color`).
 /// -> dictionary
-#let face(pts, ..style) = {
+#let face(pts, ..style, name: none) = {
   _no-pos(style, "face")
-  (kind: "face", pts: pts.map(_pt), ..style.named())
+  _with-name((kind: "face", pts: pts.map(_pt), ..style.named()), name)
 }
 
 /// An indexed triangle/quad mesh: `vertices` plus `faces` as arrays of vertex
@@ -98,9 +94,9 @@
 /// - faces (array): Faces, each an array of 0-based indices into `vertices`.
 /// - ..style (any): Styling hooks (e.g. `color`).
 /// -> dictionary
-#let mesh(vertices, faces, ..style) = {
+#let mesh(vertices, faces, ..style, name: none) = {
   _no-pos(style, "mesh")
-  (kind: "mesh", vertices: vertices.map(_pt), faces: faces, ..style.named())
+  _with-name((kind: "mesh", vertices: vertices.map(_pt), faces: faces, ..style.named()), name)
 }
 
 /// A text label anchored at `at`.
@@ -109,9 +105,9 @@
 /// - text (any): The label content.
 /// - ..style (any): Styling hooks.
 /// -> dictionary
-#let label(at, text, ..style) = {
+#let label(at, text, ..style, name: none) = {
   _no-pos(style, "label")
-  (kind: "label", at: _pt(at), text: text, ..style.named())
+  _with-name((kind: "label", at: _pt(at), text: text, ..style.named()), name)
 }
 
 // --- affine transforms ------------------------------------------------------
@@ -142,7 +138,7 @@
 #let scale(s) = affine(matrix: ((s, 0, 0), (0, s, 0), (0, 0, s)))
 
 /// Applies affine `t` to a single point.
-#let _apply(t, p) = vadd(mvec(t.matrix, p), t.offset)
+#let _apply(t, p) = transform-coordinate(t, p)
 
 /// Applies affine `t` to every point carried by primitive `p`, returning a new
 /// primitive of the same kind. Non-positional fields (radius, colour, ...) are
@@ -172,9 +168,9 @@
 ///
 /// `prims` may mix bare primitives and nested groups (which are themselves
 /// arrays of primitives); everything is flattened into one array with `transform`
-/// applied to every point. Groups nest: an outer `group` simply re-transforms the
-/// already-concrete points of an inner one, so transforms compose left-to-right
-/// with no lazy evaluation.
+/// applied to every coordinate. Groups nest and compose left-to-right. Concrete
+/// points transform immediately; named-anchor references retain the same ordered
+/// transforms and apply them after resolution.
 ///
 /// - transform (dictionary): An affine transform (see `affine`, `translate`).
 /// - ..prims (dictionary, array): Primitives and/or nested groups.
@@ -188,6 +184,17 @@
 }
 
 // --- scene assembly ---------------------------------------------------------
+
+#let _prim-coordinates(p) = {
+  let k = p.kind
+  if k == "sphere" { (p.center,) }
+  else if k == "seg" or k == "edge" { (p.a, p.b) }
+  else if k == "arrow" { (p.from, p.to) }
+  else if k == "face" { p.pts }
+  else if k == "mesh" { p.vertices }
+  else if k == "label" { (p.at,) }
+  else { panic("unknown primitive kind: " + k) }
+}
 
 /// The min/max corners a primitive contributes to the axis-aligned bbox.
 #let _prim-points(p) = {
@@ -206,9 +213,10 @@
   else { panic("unknown primitive kind: " + k) }
 }
 
-/// Axis-aligned bounding box `(min, max)` over `prims`. An empty scene yields a
-/// degenerate box at the origin.
+/// Axis-aligned bounding box `(min, max)` over concrete `prims`. An empty scene
+/// yields a degenerate box at the origin; unresolved references yield `none`.
 #let _bbox(prims) = {
+  if not prims.all(p => _prim-coordinates(p).all(coordinate-is-concrete)) { return none }
   let pts = ()
   for p in prims { pts += _prim-points(p) }
   if pts.len() == 0 { return (min: (0, 0, 0), max: (0, 0, 0)) }
@@ -219,11 +227,27 @@
   )
 }
 
+#let _object-registry(prims) = {
+  let objects = (:)
+  for p in prims {
+    let name = p.at("name", default: none)
+    if name != none {
+      assert(type(name) == str, message: "object name must be a string, got " + repr(name))
+      assert(name != "", message: "object name must not be empty")
+      assert(not name.contains("."), message: "object name " + repr(name) + " must not contain `.`")
+      assert(name not in objects, message: "duplicate object name " + repr(name))
+      objects.insert(name, p)
+    }
+  }
+  objects
+}
+
 /// Assembles primitives into a pure-data scene.
 ///
 /// Positional arguments may be bare primitives or nested groups (arrays of
-/// primitives); they are flattened into one array. The result is plain data —
-/// `(prims: array, bbox: (min: 3-vec, max: 3-vec))` — with no cetz dependency.
+/// primitives); they are flattened into one array. The result is plain data:
+/// `(prims:, bbox:, objects:)`, where `bbox` is `none` until named references are
+/// resolved. No CeTZ dependency is involved.
 ///
 /// - ..prims (dictionary, array): Primitives and/or groups.
 /// -> dictionary
@@ -233,5 +257,6 @@
     message: "build-scene takes no named arguments, got " + repr(prims.named()),
   )
   let flat = _flatten(prims.pos())
-  (prims: flat, bbox: _bbox(flat))
+  let objects = _object-registry(flat)
+  (prims: flat, bbox: _bbox(flat), objects: objects)
 }

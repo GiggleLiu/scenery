@@ -33,7 +33,32 @@ The sources for these figures are in [`examples/`](examples/).
 #render-scene(scene, camera(azimuth: 30deg, elevation: 20deg), width: 5cm)
 ```
 
-`build-scene` collects primitives into pure scene data; `render-scene` projects them through a `camera` and paints them at the requested on-page `width`. That is the whole loop. (The examples in this repository import `/lib.typ` directly so they run against the working tree; in your own documents use the `@preview` import shown here.)
+`build-scene` collects primitives into pure scene data; `render-scene` resolves any named anchors, projects through a `camera`, and paints at the requested on-page `width`. That is the whole loop. (The examples in this repository import `/lib.typ` directly so they run against the working tree; in your own documents use the `@preview` import shown here.)
+
+### Named objects and anchors
+
+Give a primitive a unique `name:` and use CeTZ-style `"object.anchor"` references in primitive coordinate parameters (`center`, `a`/`b`, `from`/`to`, vertices, and label `at`):
+
+```typst
+#let scene = build-scene(
+  sphere((0, 0, 0), 0.6, name: "a"),
+  sphere((2, 0, 0), 0.6, name: "b"),
+  seg("a.east", "b.west", name: "bond"),
+  label("bond.mid", [d], text-anchor: "south"),
+)
+```
+
+References may point forward because the complete scene registry is resolved at render time. Sphere compass anchors are camera-relative points on the visible silhouette. Use `anchor-ref("a", anchor: 30deg)` for an angular sphere anchor, and `anchor-of(scene, camera, "bond.mid")` to query a concrete 3D point. Shape-generator inputs and affine transform parameters remain concrete vectors; references belong to the primitives those APIs produce or transform.
+
+| Primitive | Default | Anchors |
+| --- | --- | --- |
+| `sphere` | `center` | `center`, compass directions; angles via `anchor-ref` |
+| `seg`, `edge`, `arrow` | `mid` | `start`, `mid`, `end` |
+| `face` | `centroid` | `centroid`, `vertex-0`, `vertex-1`, … |
+| `mesh` | bounding-box `center` | `center`, `vertex-0`, `vertex-1`, … |
+| `label` | `center` | attachment-point `center` |
+
+Inside a shared `cetz.canvas`, `scene-group` registers these logical anchors with CeTZ, so later draw commands can directly use `"a.east"` or `"bond.mid"`. Names stay stable even when the renderer splits a line for occlusion.
 
 ### Imports
 
@@ -41,7 +66,7 @@ The sources for these figures are in [`examples/`](examples/).
 
 ## How it works
 
-A scene is a flat array of typed primitives — plain dictionaries tagged by `kind`, e.g. `(kind: "sphere", center: (0,0,0), r: 0.6)`. Nothing in the data model touches CeTZ. At render time each primitive is projected orthographically. Segments and edges are split at opaque sphere silhouettes and their hidden intervals are removed; the remaining primitives are keyed by camera depth (spheres by centre, line fragments by midpoint, faces by centroid; meshes explode into per-face polygons that sort independently), sorted far-to-near, and drawn. Spheres use radial-gradient shading, faces are flat-shaded from one world light, and labels stay on top. Styling is a pure three-layer merge — theme defaults, per-kind block, then each primitive's own hooks — so colours and widths are just named arguments on the constructors.
+A scene is a flat array of typed primitives — plain dictionaries tagged by `kind`, e.g. `(kind: "sphere", center: (0,0,0), r: 0.6)`. Nothing in the data model touches CeTZ. At render time named coordinates are resolved for the selected camera, then each primitive is projected orthographically. Segments and edges are split at opaque sphere silhouettes and their hidden intervals are removed; the remaining primitives are keyed by camera depth (spheres by centre, line fragments by midpoint, faces by centroid; meshes explode into per-face polygons that sort independently), sorted far-to-near, and drawn. Spheres use radial-gradient shading, faces are flat-shaded from one world light, and labels stay on top. Styling is a pure three-layer merge — theme defaults, per-kind block, then each primitive's own hooks — so colours and widths are just named arguments on the constructors.
 
 ## API reference
 
@@ -51,14 +76,23 @@ Grouped by source module; every name below is exported from the package root.
 
 | Name | Description |
 | --- | --- |
-| `sphere(center, r, ..style)` | Shaded ball at `center` with radius `r`. |
-| `seg(a, b, ..style)` | Thick round-capped segment (e.g. a bond); width `w` in scene units. |
-| `edge(a, b, ..style)` | Thin wireframe edge (absolute stroke width). |
-| `arrow(from, to, ..style)` | Arrow with a scaled head (`head`, `w`). |
-| `face(pts, ..style)` | Filled planar polygon; `fill-opacity` for translucency. |
-| `mesh(vertices, faces, ..style)` | Indexed polygon mesh; each face sorts on its own. |
-| `label(at, text, ..style)` | Text anchored at a 3D point, painted on top. |
-| `build-scene(..prims)` | Flattens primitives and groups into scene data `(prims, bbox)`. |
+| `sphere(center, r, name:, ..style)` | Shaded ball at `center` with radius `r`. |
+| `seg(a, b, name:, ..style)` | Thick round-capped segment (e.g. a bond); width `w` in scene units. |
+| `edge(a, b, name:, ..style)` | Thin wireframe edge (absolute stroke width). |
+| `arrow(from, to, name:, ..style)` | Arrow with a scaled head (`head`, `w`). |
+| `face(pts, name:, ..style)` | Filled planar polygon; `fill-opacity` for translucency. |
+| `mesh(vertices, faces, name:, ..style)` | Indexed polygon mesh; each face sorts on its own. |
+| `label(at, text, name:, ..style)` | Text at a 3D point; `text-anchor` controls alignment. |
+| `build-scene(..prims)` | Flattens primitives/groups and validates object names. |
+
+### Named coordinates — `anchor-ref`, `resolve-scene`, `anchor-of`, `anchor-names`
+
+| Name | Description |
+| --- | --- |
+| `anchor-ref(name, anchor:)` | Explicit named-anchor coordinate, including angular sphere anchors. |
+| `resolve-scene(scene, camera)` | Resolves every reference and camera-relative anchor to concrete geometry. |
+| `anchor-of(scene, camera, reference)` | Returns one anchor as a concrete 3D point. |
+| `anchor-names(scene, camera, name)` | Lists the named anchors available on an object. |
 
 ### Transforms — `affine`, `translate`, `scale`, `group`
 
@@ -92,7 +126,7 @@ Grouped by source module; every name below is exported from the package root.
 | Name | Description |
 | --- | --- |
 | `render-scene(scene, camera, width:, theme:, axes:, legend:, colorbar:)` | Renders a scene to Typst content at a target on-page width. |
-| `scene-group(scene, camera, ..)` | Raw CeTZ draw commands for embedding inside an existing `cetz.canvas`. |
+| `scene-group(scene, camera, ..)` | Raw CeTZ commands; registers logical names for later `"object.anchor"` use. |
 | `sort-prims(prims, camera)` | Pure depth-sort (far-to-near) with meshes exploded to faces. |
 
 ### Styling — `default-theme`, `resolve-style`, `palette-color`
