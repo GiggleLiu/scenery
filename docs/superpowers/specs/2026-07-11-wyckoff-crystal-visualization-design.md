@@ -48,12 +48,15 @@ Typst engine in a future release without API changes.
 )
 
 // Layer group ⇒ 2D slab (periodic in a,b; finite thickness)
+// Erratum (implementation): 2H-MoS₂ monolayer is layer group 78 (p-6m2) with
+// Mo at Wyckoff b (1/3,2/3,0) and S at f (2/3,1/3,±z), per the ITA/pyxtal
+// tables the package ships — the original draft's 72/a/h were provisional.
 #let mos2 = structure(
-  layergroup: 72,
+  layergroup: 78,
   lattice: (a: 3.16),
   sites: (
-    (element: "Mo", wyckoff: "a"),
-    (element: "S",  wyckoff: "h", z: 1.56),  // free params per site
+    (element: "Mo", wyckoff: "b"),
+    (element: "S",  wyckoff: "f", z: 1.56),  // free params per site
   ),
 )
 

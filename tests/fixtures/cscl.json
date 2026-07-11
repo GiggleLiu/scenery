@@ -1,0 +1,49 @@
+{
+ "name": "cscl",
+ "kind": "3d",
+ "group": 221,
+ "ltype-params": {
+  "a": 4.11
+ },
+ "sites": [
+  {
+   "element": "Cs",
+   "wyckoff": "a",
+   "p": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "element": "Cl",
+   "wyckoff": "b",
+   "p": [
+    0.5,
+    0.5,
+    0.5
+   ]
+  }
+ ],
+ "expected": {
+  "natoms": 2,
+  "atoms": [
+   {
+    "element": "Cs",
+    "frac": [
+     0.0,
+     0.0,
+     0.0
+    ]
+   },
+   {
+    "element": "Cl",
+    "frac": [
+     0.5,
+     0.5,
+     0.5
+    ]
+   }
+  ]
+ }
+}

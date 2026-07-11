@@ -1,0 +1,97 @@
+{
+ "name": "zincblende",
+ "kind": "3d",
+ "group": 216,
+ "ltype-params": {
+  "a": 5.41
+ },
+ "sites": [
+  {
+   "element": "Zn",
+   "wyckoff": "a",
+   "p": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "element": "S",
+   "wyckoff": "c",
+   "p": [
+    0.25,
+    0.25,
+    0.25
+   ]
+  }
+ ],
+ "expected": {
+  "natoms": 8,
+  "atoms": [
+   {
+    "element": "Zn",
+    "frac": [
+     0.0,
+     0.5,
+     0.5
+    ]
+   },
+   {
+    "element": "Zn",
+    "frac": [
+     0.0,
+     0.0,
+     0.0
+    ]
+   },
+   {
+    "element": "Zn",
+    "frac": [
+     0.5,
+     0.0,
+     0.5
+    ]
+   },
+   {
+    "element": "Zn",
+    "frac": [
+     0.5,
+     0.5,
+     0.0
+    ]
+   },
+   {
+    "element": "S",
+    "frac": [
+     0.75,
+     0.75,
+     0.25
+    ]
+   },
+   {
+    "element": "S",
+    "frac": [
+     0.25,
+     0.25,
+     0.25
+    ]
+   },
+   {
+    "element": "S",
+    "frac": [
+     0.75,
+     0.25,
+     0.75
+    ]
+   },
+   {
+    "element": "S",
+    "frac": [
+     0.25,
+     0.75,
+     0.75
+    ]
+   }
+  ]
+ }
+}

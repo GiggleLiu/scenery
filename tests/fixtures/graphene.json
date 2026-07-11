@@ -1,0 +1,40 @@
+{
+ "name": "graphene",
+ "kind": "layer",
+ "group": 80,
+ "ltype-params": {
+  "a": 2.46
+ },
+ "sites": [
+  {
+   "element": "C",
+   "wyckoff": "b",
+   "p": [
+    0.0,
+    0.0,
+    0.0
+   ]
+  }
+ ],
+ "expected": {
+  "natoms": 2,
+  "atoms": [
+   {
+    "element": "C",
+    "frac": [
+     0.333333,
+     0.666667,
+     0.0
+    ]
+   },
+   {
+    "element": "C",
+    "frac": [
+     0.666667,
+     0.333333,
+     0.0
+    ]
+   }
+  ]
+ }
+}

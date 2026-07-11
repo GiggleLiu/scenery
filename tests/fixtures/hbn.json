@@ -1,0 +1,49 @@
+{
+ "name": "hbn",
+ "kind": "layer",
+ "group": 78,
+ "ltype-params": {
+  "a": 2.5
+ },
+ "sites": [
+  {
+   "element": "B",
+   "wyckoff": "b",
+   "p": [
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "element": "N",
+   "wyckoff": "c",
+   "p": [
+    0.0,
+    0.0,
+    0.0
+   ]
+  }
+ ],
+ "expected": {
+  "natoms": 2,
+  "atoms": [
+   {
+    "element": "B",
+    "frac": [
+     0.333333,
+     0.666667,
+     0.0
+    ]
+   },
+   {
+    "element": "N",
+    "frac": [
+     0.666667,
+     0.333333,
+     0.0
+    ]
+   }
+  ]
+ }
+}

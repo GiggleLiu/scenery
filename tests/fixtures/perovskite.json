@@ -1,0 +1,82 @@
+{
+ "name": "perovskite",
+ "kind": "3d",
+ "group": 221,
+ "ltype-params": {
+  "a": 3.905
+ },
+ "sites": [
+  {
+   "element": "Sr",
+   "wyckoff": "a",
+   "p": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "element": "Ti",
+   "wyckoff": "b",
+   "p": [
+    0.5,
+    0.5,
+    0.5
+   ]
+  },
+  {
+   "element": "O",
+   "wyckoff": "c",
+   "p": [
+    0,
+    0.5,
+    0.5
+   ]
+  }
+ ],
+ "expected": {
+  "natoms": 5,
+  "atoms": [
+   {
+    "element": "Sr",
+    "frac": [
+     0.0,
+     0.0,
+     0.0
+    ]
+   },
+   {
+    "element": "Ti",
+    "frac": [
+     0.5,
+     0.5,
+     0.5
+    ]
+   },
+   {
+    "element": "O",
+    "frac": [
+     0.0,
+     0.5,
+     0.5
+    ]
+   },
+   {
+    "element": "O",
+    "frac": [
+     0.5,
+     0.0,
+     0.5
+    ]
+   },
+   {
+    "element": "O",
+    "frac": [
+     0.5,
+     0.5,
+     0.0
+    ]
+   }
+  ]
+ }
+}

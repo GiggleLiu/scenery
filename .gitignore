@@ -1,0 +1,8 @@
+tools/.venv/
+tests/*.pdf
+tests/*.png
+examples/*.pdf
+*.pdf
+!manual.pdf
+__pycache__/
+.superpowers/

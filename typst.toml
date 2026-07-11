@@ -1,0 +1,12 @@
+[package]
+name = "wyckoff"
+version = "0.1.0"
+entrypoint = "lib.typ"
+authors = ["GiggleLiu"]
+license = "MIT"
+description = "Materials Project style crystal structure figures from space groups, layer groups and Wyckoff positions"
+repository = "https://github.com/GiggleLiu/wyckoff"
+keywords = ["crystal", "crystallography", "space group", "wyckoff", "materials", "visualization", "physics", "chemistry"]
+categories = ["visualization"]
+compiler = "0.14.0"
+exclude = ["docs/*", "tools/*", "tests/*", "examples/*", "images/*", "Makefile", ".github/*"]
