@@ -7,7 +7,7 @@
 .PHONY: all test examples manual pkgroot clean
 
 # Packages in dependency order (core first, then its consumers).
-PACKAGES := scenery wyckoff
+PACKAGES := scenery wyckoff brillouin
 
 # During development `@preview/<pkg>:<version>` must resolve to the local
 # checkout. Typst searches TYPST_PACKAGE_PATH for a `<namespace>/<name>/<version>`

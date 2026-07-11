@@ -8,7 +8,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        package: [scenery, wyckoff]
+        package: [scenery, wyckoff, brillouin]
     env:
       # Resolve @preview/<pkg>:<version> imports to the local checkout.
       TYPST_PACKAGE_PATH: ${{ github.workspace }}/_pkgroot
