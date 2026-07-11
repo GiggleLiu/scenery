@@ -9,3 +9,9 @@
 
 // Shape generators: convex hull faces and parametric solid meshes.
 #import "src/shape.typ": hull-faces, uv-sphere, cylinder, cone, prism
+
+// Theme data and per-primitive style resolution (pure data, no cetz).
+#import "src/style.typ": default-theme, resolve-style, palette-color
+
+// Depth-sort (pure) and the cetz painter's-algorithm backend.
+#import "src/render.typ": sort-prims, scene-group, render-scene
