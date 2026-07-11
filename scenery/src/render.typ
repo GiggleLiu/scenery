@@ -159,7 +159,12 @@
       kind: k,
       pts: p.pts.map(q => _screen(camera, unit, q)),
       fill: fill,
-      stroke: (paint: st.color.darken(st.stroke-darken), thickness: st.stroke-width),
+      // an explicit `stroke` hook (e.g. `none` from the solid generators)
+      // overrides the theme-derived facet stroke
+      stroke: st.at(
+        "stroke",
+        default: (paint: st.color.darken(st.stroke-darken), thickness: st.stroke-width),
+      ),
     )
   } else if k == "label" {
     (

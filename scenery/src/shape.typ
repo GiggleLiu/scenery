@@ -93,6 +93,14 @@
 
 // --- parametric solids ------------------------------------------------------
 
+/// Merges generator styling: parametric solids default to `stroke: none` so
+/// their facet edges do not read as a wireframe; callers can override.
+#let _solid-style(style) = {
+  let named = style.named()
+  if "stroke" not in named { named.insert("stroke", none) }
+  named
+}
+
 /// An orthonormal basis `(u, v)` spanning the plane perpendicular to `dir`.
 #let _frame(dir) = {
   let d = vnorm(dir)
@@ -134,7 +142,7 @@
       faces.push((idx(i, j), idx(i, j + 1), idx(i + 1, j + 1), idx(i + 1, j)))
     }
   }
-  mesh(verts, faces, ..style)
+  mesh(verts, faces, .._solid-style(style))
 }
 
 /// A cylinder mesh with axis `from` -> `to` and radius `r`.
@@ -164,7 +172,7 @@
     faces.push(range(segments))
     faces.push(range(segments, 2 * segments))
   }
-  mesh(verts, faces, ..style)
+  mesh(verts, faces, .._solid-style(style))
 }
 
 /// A cone mesh: base circle of radius `r` at `from`, apex at `to`.
@@ -189,7 +197,7 @@
     faces.push((j, calc.rem(j + 1, segments), segments))
   }
   if cap { faces.push(range(segments)) }
-  mesh(verts, faces, ..style)
+  mesh(verts, faces, .._solid-style(style))
 }
 
 /// A prism/extrusion mesh: the polygon `base` swept by the vector `extent`.
@@ -213,5 +221,5 @@
     faces.push(range(n))
     faces.push(range(n, 2 * n))
   }
-  mesh(verts, faces, ..style)
+  mesh(verts, faces, .._solid-style(style))
 }
