@@ -10,6 +10,6 @@
 #bz-figure(
   (a: 2.46, c: 6.70, gamma: 120deg), // graphite-like, in Å
   bravais: "hP",
-  view: (azimuth: 25deg, elevation: 22deg),
-  width: 7cm,
+  view: (azimuth: 90deg, elevation: 24deg),
+  width: 8cm,
 )

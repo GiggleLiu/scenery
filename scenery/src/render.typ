@@ -84,6 +84,147 @@
   out
 }
 
+// The interval in [0, 1] where a quadratic `a t^2 + b t + c` is <= 0.
+// The quadratics used below are squared distances minus a radius squared, so
+// `a` is non-negative and their sublevel set is either empty or one interval.
+#let _quadratic-interval(a, b, c) = {
+  if a == 0 {
+    if c <= 0 { (0.0, 1.0) } else { none }
+  } else {
+    let disc = b * b - 4 * a * c
+    if disc <= 0 { none } else {
+      let root = calc.sqrt(disc)
+      let lo = calc.max(0.0, (-b - root) / (2 * a))
+      let hi = calc.min(1.0, (-b + root) / (2 * a))
+      if hi > lo { (lo, hi) } else { none }
+    }
+  }
+}
+
+// Restrict an interval to the half-line where h(t) = h0 + dh*t is in front
+// of (`front: true`) or behind (`front: false`) the sphere centre plane.
+#let _depth-half(interval, h0, dh, front: false) = {
+  if interval == none { return none }
+  let (lo, hi) = interval
+  if dh == 0 {
+    let keep = if front { h0 >= 0 } else { h0 <= 0 }
+    if keep { interval } else { none }
+  } else {
+    let cross = -h0 / dh
+    if front {
+      if dh > 0 { lo = calc.max(lo, cross) }
+      else { hi = calc.min(hi, cross) }
+    } else {
+      if dh > 0 { hi = calc.min(hi, cross) }
+      else { lo = calc.max(lo, cross) }
+    }
+    if hi > lo { (lo, hi) } else { none }
+  }
+}
+
+// Parameter intervals of line a--b hidden by an opaque sphere under an
+// orthographic camera. Behind the centre plane, the whole projected disk hides
+// the line. In front of that plane, only the part inside the actual sphere is
+// hidden; a line nearer than the sphere's front surface remains visible.
+#let _line-sphere-occlusion(a, b, sp, camera) = {
+  let pa = project(camera, a)
+  let pb = project(camera, b)
+  let pc = project(camera, sp.center)
+  let (qx, qy) = (pa.sx - pc.sx, pa.sy - pc.sy)
+  let (dx, dy) = (pb.sx - pa.sx, pb.sy - pa.sy)
+  let h0 = pa.depth - pc.depth
+  let dh = pb.depth - pa.depth
+  let aa = dx * dx + dy * dy
+  let bb = 2 * (qx * dx + qy * dy)
+  let cc = qx * qx + qy * qy - sp.r * sp.r
+  let disk = _quadratic-interval(aa, bb, cc)
+  let ball = _quadratic-interval(
+    aa + dh * dh,
+    bb + 2 * h0 * dh,
+    cc + h0 * h0,
+  )
+  let hidden = ()
+  let rear = _depth-half(disk, h0, dh)
+  let front = _depth-half(ball, h0, dh, front: true)
+  if rear != none { hidden.push(rear) }
+  if front != none { hidden.push(front) }
+  (hidden: hidden, disk: disk)
+}
+
+#let _merge-intervals(intervals) = {
+  // These are dimensionless line parameters, so this tolerance is independent
+  // of the scene's world-unit scale.
+  let eps = 1e-12
+  let merged = ()
+  for cur in intervals.sorted(key: x => x.at(0)) {
+    if merged.len() == 0 {
+      merged.push(cur)
+    } else {
+      let prev = merged.last()
+      if cur.at(0) <= prev.at(1) + eps {
+        merged = merged.slice(0, merged.len() - 1)
+        merged.push((prev.at(0), calc.max(prev.at(1), cur.at(1))))
+      } else {
+        merged.push(cur)
+      }
+    }
+  }
+  merged
+}
+
+#let _lerp-point(a, b, t) = vadd(vscale(a, 1 - t), vscale(b, t))
+
+/// Splits line primitives into the portions visible around opaque spheres.
+///
+/// This is deliberately separate from `sort-prims`: the public helper remains
+/// a sorting-only operation, while the render path can assign a correct depth
+/// key to every visible line fragment. Segment and edge styles are preserved.
+#let _clip-lines(prims, camera) = {
+  let eps = 1e-12 // dimensionless parameter-space tolerance
+  let spheres = prims.filter(p => p.kind == "sphere")
+  let out = ()
+  for p in prims {
+    if p.kind == "seg" or p.kind == "edge" {
+      let hidden = ()
+      let cuts = (0.0, 1.0)
+      for sp in spheres {
+        let occ = _line-sphere-occlusion(p.a, p.b, sp, camera)
+        hidden += occ.hidden
+        // Split even a fully visible line where it enters/leaves the projected
+        // disk. That gives the overlapping foreground piece its own depth key
+        // instead of letting a distant, non-overlapping tail drag its midpoint
+        // behind the sphere.
+        if occ.disk != none { cuts += (occ.disk.at(0), occ.disk.at(1)) }
+      }
+      let merged = _merge-intervals(hidden)
+      for iv in merged {
+        cuts += (iv.at(0), iv.at(1))
+      }
+      cuts = cuts.sorted()
+      let unique = ()
+      for t in cuts {
+        if unique.len() == 0 or t - unique.last() > eps { unique.push(t) }
+      }
+      let visible = ()
+      for i in range(unique.len() - 1) {
+        let iv = (unique.at(i), unique.at(i + 1))
+        let mid = (iv.at(0) + iv.at(1)) / 2
+        let is-hidden = merged.any(h => mid > h.at(0) and mid < h.at(1))
+        if iv.at(1) - iv.at(0) > eps and not is-hidden { visible.push(iv) }
+      }
+      for iv in visible {
+        let q = p
+        q.insert("a", _lerp-point(p.a, p.b, iv.at(0)))
+        q.insert("b", _lerp-point(p.a, p.b, iv.at(1)))
+        out.push(q)
+      }
+    } else {
+      out.push(p)
+    }
+  }
+  out
+}
+
 /// Depth-sorts scene primitives back-to-front for painter's-algorithm drawing.
 ///
 /// Pure — no cetz. Each primitive gets a scalar depth key from `camera`:
@@ -229,7 +370,8 @@
 ) = {
   // All geometry resolved to plain data before the wildcard import, so the loop
   // below cannot be tripped by cetz re-exporting `project`/`scale`.
-  let records = sort-prims(scene.prims, camera).map(p => _record(camera, unit, theme, p))
+  let records = sort-prims(_clip-lines(scene.prims, camera), camera)
+    .map(p => _record(camera, unit, theme, p))
   // Annotation placement, in canvas coords (screen projection times `unit`).
   let sb = _projected-screen-bbox(camera, scene.bbox)
   let (x0, y0, x1, y1) = (sb.at(0) * unit, sb.at(1) * unit, sb.at(2) * unit, sb.at(3) * unit)

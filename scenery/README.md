@@ -41,7 +41,7 @@ The sources for these figures are in [`examples/`](examples/).
 
 ## How it works
 
-A scene is a flat array of typed primitives — plain dictionaries tagged by `kind`, e.g. `(kind: "sphere", center: (0,0,0), r: 0.6)`. Nothing in the data model touches CeTZ. At render time each primitive is projected orthographically, keyed by camera depth (spheres by centre, segments by midpoint, faces by centroid; meshes explode into per-face polygons that sort independently), sorted far-to-near, and drawn: spheres as radial-gradient shaded balls, faces flat-shaded from a single world light, labels always last so they stay on top. Styling is a pure three-layer merge — theme defaults, per-kind block, then each primitive's own hooks — so colours and widths are just named arguments on the constructors.
+A scene is a flat array of typed primitives — plain dictionaries tagged by `kind`, e.g. `(kind: "sphere", center: (0,0,0), r: 0.6)`. Nothing in the data model touches CeTZ. At render time each primitive is projected orthographically. Segments and edges are split at opaque sphere silhouettes and their hidden intervals are removed; the remaining primitives are keyed by camera depth (spheres by centre, line fragments by midpoint, faces by centroid; meshes explode into per-face polygons that sort independently), sorted far-to-near, and drawn. Spheres use radial-gradient shading, faces are flat-shaded from one world light, and labels stay on top. Styling is a pure three-layer merge — theme defaults, per-kind block, then each primitive's own hooks — so colours and widths are just named arguments on the constructors.
 
 ## API reference
 
@@ -120,9 +120,9 @@ Small pure vector/matrix helpers (`mvec` is matrix·vector, `lerp` interpolates)
 ## Limitations
 
 - **Orthographic only.** There is no perspective camera; parallel lines stay parallel and there is no foreshortening. This is the right projection for diagrams and technical figures, and the deliberate scope for now.
-- **Painter's algorithm.** Primitives are sorted as whole units by a single depth key, so *intersecting* translucent faces can occasionally be layered in the wrong order. Non-intersecting scenes (the common case) sort correctly; opaque scenes are unaffected.
+- **Painter's algorithm.** Faces and other unsplit primitives use one depth key, so intersecting translucent faces can occasionally be layered in the wrong order. Segments and edges are fragmented against opaque sphere silhouettes, but arbitrary polygon intersections are not split.
 - **Practical size cap.** Everything runs in pure Typst, so compile time grows with primitive count. A few hundred to ~2,000 primitives is comfortable; tens of thousands are not.
-- **No hidden-surface removal.** Every face is drawn (there is no back-face culling or z-buffer); depth ordering alone resolves occlusion.
+- **Limited hidden-surface removal.** Opaque spheres clip hidden segment and edge intervals. Faces have no back-face culling or z-buffer; their occlusion still relies on painter ordering.
 
 ## Roadmap
 

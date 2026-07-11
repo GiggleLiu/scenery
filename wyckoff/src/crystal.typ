@@ -12,10 +12,12 @@
   legend: true,
   axes: true,
   radius: 0.45,
+  colors: (:),
   width: 8cm,
 ) = {
   let scene = build-scene(structure, view: view, supercell: supercell,
-    bonds: bonds, polyhedra: polyhedra, labels: labels, radius: radius)
+    bonds: bonds, polyhedra: polyhedra, labels: labels, radius: radius,
+    colors: colors)
   render(scene, width: width, legend: legend,
     axes-info: if axes {
       (vectors: structure.vectors, view: view,
@@ -31,9 +33,11 @@
   polyhedra: (),
   labels: false,
   radius: 0.45,
+  colors: (:),
   scale: 1.0,
 ) = {
   let scene = build-scene(structure, view: view, supercell: supercell,
-    bonds: bonds, polyhedra: polyhedra, labels: labels, radius: radius)
+    bonds: bonds, polyhedra: polyhedra, labels: labels, radius: radius,
+    colors: colors)
   draw-scene(scene, scale: scale)
 }

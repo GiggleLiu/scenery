@@ -43,7 +43,8 @@ preparation step clips `seg` and `edge` primitives against spheres before the
 normal depth sort. Occlusion is evaluated in camera coordinates: projected line
 parts behind the sphere center are hidden across the sphere disk, while parts in
 front of the center are hidden only when they are inside the sphere surface.
-Visible fragments retain the original primitive style.
+Lines are also split at every sphere-silhouette boundary so a visible foreground
+piece receives its own depth key. Visible fragments retain the original style.
 
 Focused tests cover a center-to-outside bond, a fully hidden rear line, a valid
 foreground line, and a line crossing multiple spheres. Existing compile tests

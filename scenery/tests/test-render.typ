@@ -1,7 +1,7 @@
 #import "/src/scene.typ": sphere, seg, edge, arrow, face, label, build-scene
 #import "/src/shape.typ": uv-sphere, cylinder
 #import "/src/camera.typ": camera
-#import "/src/render.typ": sort-prims, render-scene, _sphere-fill
+#import "/src/render.typ": sort-prims, render-scene, _sphere-fill, _clip-lines
 
 // A camera with azimuth = elevation = 0 projects (x, y, z) to
 // (sx: x, sy: z, depth: y): the depth key is simply the y coordinate. That
@@ -51,6 +51,70 @@
 // A label keeps the +1e9 depth key even against a very near sphere.
 #let lsc = build-scene(sphere((0, 100, 0), 1), label((0, 0, 0), [L]))
 #assert(sort-prims(lsc.prims, cam0).last().kind == "label", message: "label must sort last")
+
+// --- line/sphere visibility -------------------------------------------------
+// Lines are clipped only where an opaque sphere is actually in front. This is
+// prepared separately from sort-prims so its public sorting contract is stable.
+#let clipped-bond = _clip-lines(
+  (sphere((0, 0, 0), 1), seg((0, 0, 0), (2, 0, 0))), cam0,
+)
+#let bond-parts = clipped-bond.filter(p => p.kind == "seg")
+#assert(bond-parts.len() == 1, message: "center bond should leave one visible fragment")
+#assert(
+  calc.abs(bond-parts.first().a.at(0) - 1.0) < 1e-6,
+  message: "bond must begin at the sphere silhouette, got " + repr(bond-parts.first().a),
+)
+
+// A rear line entirely inside the projected disk is fully hidden.
+#let rear = _clip-lines(
+  (sphere((0, 0, 0), 1), edge((-0.5, -2, 0), (0.5, -2, 0))), cam0,
+)
+#assert(rear.filter(p => p.kind == "edge").len() == 0, message: "rear line leaked through sphere")
+
+// A line nearer than the sphere's front surface stays visible.
+#let front = _clip-lines(
+  (sphere((0, 0, 0), 1), edge((-0.5, 2, 0), (0.5, 2, 0))), cam0,
+)
+#assert(front.filter(p => p.kind == "edge").len() == 1, message: "foreground line was hidden")
+
+// A sloped-depth line can leave the projected disk before it passes behind the
+// sphere. The overlapping foreground piece needs its own depth key; otherwise
+// the distant tail's midpoint would incorrectly place the whole line behind.
+#let crossing = _clip-lines(
+  (sphere((0, 0, 0), 1), edge((0, 2, 0), (4, -4, 0))), cam0,
+)
+#let crossing-parts = crossing.filter(p => p.kind == "edge")
+#assert(crossing-parts.len() == 2, message: "sphere boundary must split visible depth crossing")
+#let crossing-ordered = sort-prims(crossing, cam0)
+#assert(
+  crossing-ordered.last().kind == "edge" and crossing-ordered.last().depth > 0,
+  message: "valid foreground crossing must paint after the sphere",
+)
+
+// Geometry is scale-invariant: tiny coordinates must clip to the same relative
+// silhouette instead of being mistaken for a degenerate constant line.
+#let tiny = _clip-lines(
+  (sphere((0, 0, 0), 1e-6), seg((0, 0, 0), (2e-6, 0, 0))), cam0,
+)
+#let tiny-parts = tiny.filter(p => p.kind == "seg")
+#assert(tiny-parts.len() == 1, message: "tiny bond should retain its outer half")
+#assert(
+  calc.abs(tiny-parts.first().a.at(0) - 1e-6) < 1e-12,
+  message: "tiny bond clipped at the wrong scale",
+)
+
+// Two disjoint sphere silhouettes split one line into three visible fragments.
+#let multi = _clip-lines(
+  (
+    sphere((-1, 0, 0), 0.5), sphere((1, 0, 0), 0.5),
+    seg((-3, 0, 0), (3, 0, 0)),
+  ),
+  cam0,
+)
+#assert(
+  multi.filter(p => p.kind == "seg").len() == 3,
+  message: "two spheres should split a line into three fragments",
+)
 
 // --- meshes explode into independently-sorted per-face primitives ------------
 // A 6-sided capped cylinder has 6 + 2 = 8 faces; each becomes its own face prim.

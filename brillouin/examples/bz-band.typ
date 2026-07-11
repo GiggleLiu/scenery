@@ -6,6 +6,7 @@
 // randomness. (For real band structures, feed your own arrays to `band-panel`,
 // or reach for lilaq for serious plotting.)
 #import "/lib.typ": bz-figure, band-panel, band-axis
+#import "@preview/scenery:0.1.0": default-theme
 
 #set page(width: auto, height: auto, margin: 0.4cm)
 #set text(font: "New Computer Modern", size: 9pt)
@@ -14,6 +15,7 @@
 #let params = (a: a)
 #let seq = ("Γ", "X", "W", "K", "Γ", "L")
 #let ax = band-axis("cF", params, seq, samples: 40)
+#let band-theme = default-theme + (palette: (rgb("#3f5f78"),),)
 
 // fcc nearest-neighbour structure factor at a Cartesian k = (kx, ky, kz).
 #let sfac(k) = {
@@ -35,5 +37,5 @@
   column-gutter: 1.4em,
   align: horizon,
   bz-figure(params, bravais: "cF", path: seq, width: 5.2cm),
-  band-panel((band1, band2, band3), ax, width: 8cm, height: 5cm),
+  band-panel((band1, band2, band3), ax, width: 8cm, height: 5cm, theme: band-theme),
 )

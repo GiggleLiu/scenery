@@ -29,6 +29,7 @@
   radius: 0.45,
   bond-width: 0.16,
   labels: false,
+  colors: (:),
 ) = {
   let az = view.at("azimuth", default: 25deg)
   let elev = view.at("elevation", default: 15deg)
@@ -45,12 +46,13 @@
   let shown = display-atoms(structure, supercell: supercell)
   let prims = ()
   let rdisp(el) = radius * element-info(el).r-atom
+  let color-of(el) = colors.at(el, default: element-info(el).color)
 
   // Spheres, then labels, then bond segs, then polyhedra faces, then cell edges:
   // this push order is the stable-sort tie-break the old renderer relied on.
   for a in shown {
     prims.push(scenery.sphere(a.cart, rdisp(a.element),
-      color: element-info(a.element).color, element: a.element))
+      color: color-of(a.element), element: a.element))
   }
   if labels {
     for a in shown {
@@ -68,13 +70,13 @@
     // Two-tone bond: one seg per half, coloured by its own atom.
     for (p, q, el) in ((a0, mid, pa.element), (mid, b0, pb.element)) {
       prims.push(scenery.seg(p, q,
-        color: element-info(el).color.darken(10%), w: bond-width))
+        color: color-of(el).darken(10%), w: bond-width))
     }
   }
 
   if polyhedra.len() > 0 {
     for poly in find-polyhedra(shown, blist, polyhedra) {
-      let col = element-info(shown.at(poly.center).element).color
+      let col = color-of(shown.at(poly.center).element)
       for f in poly.faces {
         // shade: false — the old renderer never lit faces (flat translucent fill).
         prims.push(scenery.face(f.map(p => scenery.vadd(p, face-offset)),
@@ -122,6 +124,7 @@
     prims: prims,
     bbox: (calc.min(..xs), calc.min(..ys), calc.max(..xs), calc.max(..ys)),
     elements: elements,
+    element-colors: elements.map(color-of),
     camera: cam,
   )
 }
@@ -217,8 +220,12 @@
   cetz.canvas(length: 1cm, {
     scenery.scene-group(sub, cam, unit: s)
     if legend {
+      let legend-colors = scene.at(
+        "element-colors",
+        default: scene.elements.map(el => element-info(el).color),
+      )
       scenery.legend(
-        scene.elements.map(el => (el, element-info(el).color)),
+        scene.elements.zip(legend-colors),
         origin: (x1 * s + 0.7, y1 * s),
         gap: 0.14,
       )

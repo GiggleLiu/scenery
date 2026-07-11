@@ -5,16 +5,16 @@
 // between them are tinted by height through the same colormap the colorbar
 // samples. Everything is one `build-scene`, depth-sorted back-to-front.
 #import "/lib.typ": sphere, seg, build-scene
-#import "/lib.typ": camera, render-scene, default-theme, palette-color
+#import "/lib.typ": camera, render-scene
 
 #set page(width: auto, height: auto, margin: 0.5cm)
 #set text(font: "New Computer Modern", size: 10pt)
 
-#let strand-a = palette-color(default-theme, 0) // blue
-#let strand-b = palette-color(default-theme, 1) // orange
+#let strand-a = rgb("#4477aa") // muted blue
+#let strand-b = rgb("#cc8963") // muted orange
 
 // Height colormap, shared by the rungs and the colorbar (foot = low z).
-#let heat = (rgb("#4c72b0"), rgb("#55a868"), rgb("#ccb974"), rgb("#c44e52"))
+#let heat = (rgb("#d9e2ec"), rgb("#aebfd0"), rgb("#7f9eb8"), rgb("#4f7898"))
 #let heat-grad = gradient.linear(..heat)
 
 #let rungs = 13

@@ -6,15 +6,14 @@
 // (compiled with `--root .`); published documents use the `@preview` import
 // shown in the README quickstart instead.
 #import "/lib.typ": sphere, seg, edge, arrow, face, label, build-scene
-#import "/lib.typ": camera, render-scene, default-theme, palette-color
+#import "/lib.typ": camera, render-scene
 
 #set page(width: auto, height: auto, margin: 0.5cm)
 #set text(font: "New Computer Modern", size: 10pt)
 
-#let blue = palette-color(default-theme, 0)
-#let orange = palette-color(default-theme, 1)
-#let green = palette-color(default-theme, 2)
-#let red = palette-color(default-theme, 3)
+#let blue = rgb("#4477aa")
+#let orange = rgb("#cc8963")
+#let charcoal = rgb("#4d5358")
 
 // The four corners of a ground tile at z = 0.
 #let c = ((-2.2, -2.2, 0), (2.2, -2.2, 0), (2.2, 2.2, 0), (-2.2, 2.2, 0))
@@ -27,11 +26,11 @@
   edge(c.at(2), c.at(3)), edge(c.at(3), c.at(0)),
   // sphere — two shaded balls floating above the plane.
   sphere((-1.1, -1.0, 1.2), 0.6, color: orange),
-  sphere((1.2, 1.1, 1.5), 0.5, color: green),
+  sphere((1.2, 1.1, 1.5), 0.5, color: blue),
   // seg — a thick round-capped bond joining the two balls.
-  seg((-1.1, -1.0, 1.2), (1.2, 1.1, 1.5), color: luma(90)),
+  seg((-1.1, -1.0, 1.2), (1.2, 1.1, 1.5), color: charcoal),
   // arrow — a vertical normal rising out of the tile centre.
-  arrow((0, 0, 0), (0, 0, 2.6), color: red),
+  arrow((0, 0, 0), (0, 0, 2.6), color: charcoal),
   // label — text anchored in 3D, always painted on top.
   label((-1.1, -1.0, 2.0), [A]),
   label((1.2, 1.1, 2.3), [B]),
