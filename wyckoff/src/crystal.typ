@@ -1,5 +1,4 @@
-#import "scene.typ": build-scene
-#import "render.typ": render, draw-scene
+#import "figure.typ": build-scene, render, draw-scene
 
 #let _default-view = (azimuth: 25deg, elevation: 15deg)
 

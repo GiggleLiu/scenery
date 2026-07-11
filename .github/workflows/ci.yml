@@ -8,7 +8,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        package: [scenery, wyckoff]
+        package: [scenery, wyckoff, brillouin]
     env:
       # Resolve @preview/<pkg>:<version> imports to the local checkout.
       TYPST_PACKAGE_PATH: ${{ github.workspace }}/_pkgroot
@@ -18,6 +18,9 @@ jobs:
         with: {typst-version: '0.14.2'}
       - name: Build local @preview package tree
         run: make pkgroot
+      - name: Check markdown links
+        if: matrix.package == 'scenery'
+        run: make check-links
       - name: Run tests
         run: make -C ${{ matrix.package }} test
       - name: Compile examples

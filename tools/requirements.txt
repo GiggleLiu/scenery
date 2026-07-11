@@ -2,3 +2,4 @@ numpy
 spglib
 pymatgen
 pyxtal
+seekpath

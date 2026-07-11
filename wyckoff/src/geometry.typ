@@ -1,6 +1,6 @@
 // Geometry for rendering: supercell replication, boundary images, and the
 // unit-cell wireframe. Pure/cetz-free; consumes a structure value (Task 7).
-#import "linalg.typ": vadd, vscale, vsub, vlen, vcross, vdot, vnorm
+#import "@preview/scenery:0.1.0": vadd, vscale, vsub, vlen, vcross, vdot, vnorm
 #import "lattice.typ": frac-to-cart
 #import "data.typ": element-info
 

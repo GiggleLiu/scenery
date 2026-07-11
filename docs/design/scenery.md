@@ -182,7 +182,12 @@ every half-space (tolerance-deduped); group vertices into faces by generating pl
 Pure Typst, bounded cost at figure scale. Rejected: offline precomputation — impossible,
 BZ geometry varies continuously with lattice parameters, not just by Bravais class.
 
-**D8 — k-paths (brillouin).** Encode the Setyawan–Curtarolo (2010) closed-form tables —
+**D8 — k-paths (brillouin).** *(Erratum, M2: the implementation ports the HPKOT
+tables — Hinuma et al. 2017, what seekpath evaluates — because HPKOT and the
+SC-2010 paper diverge on interior-point labels and path order for several
+centered lattices; coordinates agree for all shared names, divergences are
+flagged per fixture case, and verified-against-ground-truth outranks
+paper-literal numbers.)* Encode the Setyawan–Curtarolo (2010) closed-form tables —
 k-point coordinates as formulas in (a, b, c, α, β, γ) per extended Bravais variant —
 directly in Typst, so any lattice parameters work at runtime. Validate against
 seekpath-generated JSON fixtures offline (the wyckoff ground-truth pattern). Rejected:

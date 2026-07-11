@@ -1,6 +1,5 @@
 #import "/src/structure.typ": structure
-#import "/src/scene.typ": build-scene
-#import "/src/render.typ": render
+#import "/src/figure.typ": build-scene, render
 
 #set page(width: auto, height: auto, margin: 0.5cm)
 

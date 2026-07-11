@@ -1,4 +1,4 @@
-#import "linalg.typ": mvec, vadd
+#import "@preview/scenery:0.1.0": mvec, vadd
 
 #let _wrap(x) = calc.rem(calc.rem(x, 1.0) + 1.0, 1.0)
 

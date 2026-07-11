@@ -138,7 +138,7 @@ Each prototype is a one-liner returning a `structure` value; lattice parameters 
 
 ## How it works
 
-The symmetry data ships with the package as pre-generated JSON tables: Wyckoff positions and symmetry operations for all 230 space groups and all 80 layer groups, produced by [pyxtal](https://github.com/MaterSim/PyXtal) and cross-validated against [pymatgen](https://pymatgen.org) `Structure.from_spacegroup` fixtures during testing. At compile time the package expands each site through the group's operations, deduplicates, converts to Cartesian coordinates, and projects orthographically. Drawing uses a painter's algorithm: every sphere, bond segment, polyhedron face, and cell edge gets a depth key and is painted back to front.
+The symmetry data ships with the package as pre-generated JSON tables: Wyckoff positions and symmetry operations for all 230 space groups and all 80 layer groups, produced by [pyxtal](https://github.com/MaterSim/PyXtal) and cross-validated against [pymatgen](https://pymatgen.org) `Structure.from_spacegroup` fixtures during testing. At compile time the package expands each site through the group's operations, deduplicates, and converts to Cartesian coordinates. The orthographic projection and painter's-algorithm rendering — every sphere, bond segment, polyhedron face, and cell edge gets a depth key and is painted back to front — are provided by the shared [scenery](https://typst.app/universe/package/scenery) scene core, which `wyckoff` builds on; the crystallography-specific coverage suppression that hides bond stubs behind atoms is applied as a pre-filter before handing primitives to scenery.
 
 ### Space-group settings
 
