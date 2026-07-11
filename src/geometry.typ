@@ -2,6 +2,7 @@
 // unit-cell wireframe. Pure/cetz-free; consumes a structure value (Task 7).
 #import "linalg.typ": vadd, vscale, vsub, vlen
 #import "lattice.typ": frac-to-cart
+#import "data.typ": element-info
 
 #let _cart(structure, frac) = frac-to-cart(structure.vectors, frac, structure.periodic)
 
@@ -73,6 +74,35 @@
             seen.push(key)
             out.push((_cart(structure, fa), _cart(structure, fb)))
           }
+        }
+      }
+    }
+  }
+  out
+}
+
+/// O(N^2) bond search over displayed atoms. rules: auto | ((elements, max, min?), ..)
+#let find-bonds(shown, rules) = {
+  let cutoff(a, b) = {
+    if rules == auto {
+      let r = element-info(a.element).r-cov + element-info(b.element).r-cov
+      (min: 0.4, max: 1.15 * r)
+    } else {
+      let hit = rules.find(r => (
+        (r.elements.at(0), r.elements.at(1)) == (a.element, b.element)
+          or (r.elements.at(1), r.elements.at(0)) == (a.element, b.element)
+      ))
+      if hit == none { none } else { (min: hit.at("min", default: 0.4), max: hit.max) }
+    }
+  }
+  let out = ()
+  for i in range(shown.len()) {
+    for j in range(i + 1, shown.len()) {
+      let c = cutoff(shown.at(i), shown.at(j))
+      if c != none {
+        let d = vlen(vsub(shown.at(i).cart, shown.at(j).cart))
+        if d >= c.min and d <= c.max {
+          out.push((i: i, j: j))
         }
       }
     }

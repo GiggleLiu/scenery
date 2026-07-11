@@ -58,3 +58,19 @@
 )
 #assert(cell-edges(mos2).len() == 4)
 Geometry OK
+
+#import "/src/geometry.typ": find-bonds
+
+// NaCl textbook cell: 54 Na-Cl bonds among the 27 displayed atoms
+// (center Cl -> 6 face Na; each of 12 edge Cl -> 2 corner + 2 face Na)
+#let bonds = find-bonds(shown, auto)
+#assert(bonds.len() == 54, message: "got " + str(bonds.len()))
+#for b in bonds {
+  assert(shown.at(b.i).element != shown.at(b.j).element, message: "auto rule: no Na-Na/Cl-Cl at 2.82A")
+}
+
+// explicit rules: forbid everything except an impossible pair -> no bonds
+#assert(find-bonds(shown, ((elements: ("Na", "Na"), max: 1.0),)).len() == 0)
+// explicit Na-Cl cutoff
+#assert(find-bonds(shown, ((elements: ("Na", "Cl"), max: 2.9),)).len() == 54)
+Bonds OK
