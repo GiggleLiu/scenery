@@ -5,6 +5,5 @@ _pkgroot/
 **/examples/*.pdf
 **/examples/*.png
 *.pdf
-!manual.pdf
 __pycache__/
 .superpowers/

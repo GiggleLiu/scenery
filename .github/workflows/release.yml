@@ -1,0 +1,27 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: typst-community/setup-typst@v4
+        with: {typst-version: '0.14.2'}
+
+      - name: Compile scenery manual
+        run: make -C scenery manual
+
+      - name: Rename manual for the release asset
+        run: cp scenery/manual.pdf scenery-manual.pdf
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: scenery-manual.pdf

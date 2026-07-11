@@ -4,7 +4,7 @@
 # own Makefile exposing `test` and `examples` targets. This root Makefile fans
 # those out across every package and wires up local `@preview` resolution.
 
-.PHONY: all test examples pkgroot clean
+.PHONY: all test examples manual pkgroot clean
 
 # Packages in dependency order (core first, then its consumers).
 PACKAGES := scenery wyckoff
@@ -37,6 +37,12 @@ examples: pkgroot
 	  echo "==> $$pkg: examples"; \
 	  $(MAKE) -C $$pkg examples || exit 1; \
 	done
+
+# Showcase manual(s). Only scenery ships one today; the fan-out builds each
+# package's `manual` target where it exists.
+manual: pkgroot
+	@$(MAKE) -C scenery manual
+	@echo "Manual(s) built."
 
 clean:
 	@for pkg in $(PACKAGES); do $(MAKE) -C $$pkg clean; done

@@ -22,3 +22,14 @@ jobs:
         run: make -C ${{ matrix.package }} test
       - name: Compile examples
         run: make -C ${{ matrix.package }} examples
+      # The manual compiles on every PR and push as a test (its figures exercise
+      # the whole public API); it is only uploaded as an artifact on main.
+      - name: Compile manual (scenery)
+        if: matrix.package == 'scenery'
+        run: make -C scenery manual
+      - name: Upload manual PDF
+        if: matrix.package == 'scenery' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: scenery-manual
+          path: scenery/manual.pdf
