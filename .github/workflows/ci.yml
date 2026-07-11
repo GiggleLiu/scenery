@@ -5,10 +5,20 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [scenery, wyckoff]
+    env:
+      # Resolve @preview/<pkg>:<version> imports to the local checkout.
+      TYPST_PACKAGE_PATH: ${{ github.workspace }}/_pkgroot
     steps:
       - uses: actions/checkout@v4
       - uses: typst-community/setup-typst@v4
         with: {typst-version: '0.14.2'}
-      - run: make test
-      - run: |
-          for f in examples/*.typ; do typst compile --root . "$f" "/tmp/$(basename "${f%.typ}").png"; done
+      - name: Build local @preview package tree
+        run: make pkgroot
+      - name: Run tests
+        run: make -C ${{ matrix.package }} test
+      - name: Compile examples
+        run: make -C ${{ matrix.package }} examples
