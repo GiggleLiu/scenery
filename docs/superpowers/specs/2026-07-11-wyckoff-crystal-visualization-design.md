@@ -173,6 +173,16 @@ may be slow — documented, and the motivation for the plugin-ready boundary.
 - Publish `wyckoff:0.1.0` via the existing `typst/packages` fork flow.
 - Name availability verified against the Universe index on 2026-07-11.
 
+## Implementation guidance
+
+Before writing any Typst rendering or library code, implementers MUST study the
+local cetz clone at `~/tcode/cetz` as the reference for Typst visualization best
+practices: module organization (`src/`), coordinate/matrix utilities
+(`src/matrix.typ`, `src/vector.typ`), how draw commands and groups are composed,
+styling conventions (`styles.typ`), documentation style, and the test harness
+layout. Reuse cetz's vector/matrix idioms rather than reinventing them, and make
+`crystal-group()` behave like a well-mannered cetz group.
+
 ## Dependencies
 
 - Runtime: `cetz` (drawing). Nothing else.
