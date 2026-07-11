@@ -1081,7 +1081,7 @@ git add -A && git commit -m "Add public structure() constructor with validation"
 
 // 2x1x1 supercell: corner plane atoms shared -> Na: 12 corners... just check totals grow consistently
 #let sc = display-atoms(nacl, supercell: (2, 1, 1))
-#assert(sc.filter(a => a.element == "Na").len() == 21, message: "3x wide corner/face grid: 3*4+3*3 lattice-position count")
+#assert(sc.filter(a => a.element == "Na").len() == 23, message: "12 integer-corner + 11 two-half-integer fcc points on the 2x1x1 block")
 #assert(cell-edges(nacl).len() == 12)
 #assert(cell-edges(nacl, supercell: (2, 1, 1)).len() == 20, message: "two cubes sharing a face: 24 - 4 shared")
 
