@@ -32,7 +32,11 @@ fixtures:
 	$(VENV) $(TOOLS)/gen_kpath_fixtures.py
 
 images:
-	@for f in $(EXAMPLES); do $(TYPST) $$f images/$$(basename $${f%.typ}).png; done
+	@mkdir -p images
+	@for f in $(EXAMPLES); do \
+	  echo "== $$f"; \
+	  $(TYPST) --format png --ppi 144 $$f images/$$(basename $${f%.typ}).png || exit 1; \
+	done
 
 clean:
 	rm -f tests/*.pdf examples/*.pdf
