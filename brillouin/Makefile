@@ -29,6 +29,7 @@ venv:
 
 fixtures:
 	$(VENV) $(TOOLS)/gen_bz_fixtures.py
+	$(VENV) $(TOOLS)/gen_kpath_fixtures.py
 
 images:
 	@for f in $(EXAMPLES); do $(TYPST) $$f images/$$(basename $${f%.typ}).png; done
