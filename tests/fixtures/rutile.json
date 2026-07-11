@@ -1,0 +1,82 @@
+{
+ "name": "rutile",
+ "kind": "3d",
+ "group": 136,
+ "ltype-params": {
+  "a": 4.59,
+  "c": 2.96
+ },
+ "sites": [
+  {
+   "element": "Ti",
+   "wyckoff": "a",
+   "p": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "element": "O",
+   "wyckoff": "f",
+   "p": [
+    0.305,
+    0.305,
+    0
+   ]
+  }
+ ],
+ "expected": {
+  "natoms": 6,
+  "atoms": [
+   {
+    "element": "Ti",
+    "frac": [
+     0.0,
+     0.0,
+     0.0
+    ]
+   },
+   {
+    "element": "Ti",
+    "frac": [
+     0.5,
+     0.5,
+     0.5
+    ]
+   },
+   {
+    "element": "O",
+    "frac": [
+     0.305,
+     0.305,
+     0.0
+    ]
+   },
+   {
+    "element": "O",
+    "frac": [
+     0.195,
+     0.805,
+     0.5
+    ]
+   },
+   {
+    "element": "O",
+    "frac": [
+     0.805,
+     0.195,
+     0.5
+    ]
+   },
+   {
+    "element": "O",
+    "frac": [
+     0.695,
+     0.695,
+     0.0
+    ]
+   }
+  ]
+ }
+}

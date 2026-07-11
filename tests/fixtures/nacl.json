@@ -1,0 +1,97 @@
+{
+ "name": "nacl",
+ "kind": "3d",
+ "group": 225,
+ "ltype-params": {
+  "a": 5.64
+ },
+ "sites": [
+  {
+   "element": "Na",
+   "wyckoff": "a",
+   "p": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "element": "Cl",
+   "wyckoff": "b",
+   "p": [
+    0.5,
+    0.5,
+    0.5
+   ]
+  }
+ ],
+ "expected": {
+  "natoms": 8,
+  "atoms": [
+   {
+    "element": "Na",
+    "frac": [
+     0.0,
+     0.0,
+     0.0
+    ]
+   },
+   {
+    "element": "Na",
+    "frac": [
+     0.5,
+     0.5,
+     0.0
+    ]
+   },
+   {
+    "element": "Na",
+    "frac": [
+     0.5,
+     0.0,
+     0.5
+    ]
+   },
+   {
+    "element": "Na",
+    "frac": [
+     0.0,
+     0.5,
+     0.5
+    ]
+   },
+   {
+    "element": "Cl",
+    "frac": [
+     0.5,
+     0.5,
+     0.5
+    ]
+   },
+   {
+    "element": "Cl",
+    "frac": [
+     0.0,
+     0.0,
+     0.5
+    ]
+   },
+   {
+    "element": "Cl",
+    "frac": [
+     0.0,
+     0.5,
+     0.0
+    ]
+   },
+   {
+    "element": "Cl",
+    "frac": [
+     0.5,
+     0.0,
+     0.0
+    ]
+   }
+  ]
+ }
+}

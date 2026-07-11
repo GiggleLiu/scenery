@@ -1,0 +1,57 @@
+{
+ "name": "mos2",
+ "kind": "layer",
+ "group": 78,
+ "ltype-params": {
+  "a": 3.16
+ },
+ "sites": [
+  {
+   "element": "Mo",
+   "wyckoff": "b",
+   "p": [
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "element": "S",
+   "wyckoff": "f",
+   "p": [
+    0.0,
+    0.0,
+    0.15
+   ]
+  }
+ ],
+ "expected": {
+  "natoms": 3,
+  "atoms": [
+   {
+    "element": "Mo",
+    "frac": [
+     0.333333,
+     0.666667,
+     0.0
+    ]
+   },
+   {
+    "element": "S",
+    "frac": [
+     0.666667,
+     0.333333,
+     0.15
+    ]
+   },
+   {
+    "element": "S",
+    "frac": [
+     0.666667,
+     0.333333,
+     -0.15
+    ]
+   }
+  ]
+ }
+}
