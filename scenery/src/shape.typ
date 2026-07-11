@@ -41,6 +41,9 @@
 /// normal is chosen, and each face's coplanar points are returned ordered
 /// counter-clockwise about the face centroid.
 ///
+/// Assumes the points are in convex position on their hull faces: a point lying
+/// in the interior of a face polygon would be woven into that face's ring.
+///
 /// Degenerate input — fewer than four points, or all points collinear/coplanar,
 /// so no bounded polyhedron exists — returns `none`. (Typst cannot recover from a
 /// raised assertion inside a test, so a sentinel is returned for callers to check
@@ -67,9 +70,9 @@
         // collapses IEEE signed zero so an axis-aligned face is not counted
         // twice as `(0,0,-1)` and `(-0,-0,-1)`.
         let (nrm, d) = if sides.any(s => s > 1e-6) { (vscale(nrm, -1), -d) } else { (nrm, d) }
-        let nrm = nrm.map(x => x + 0.0)
-        let d = d + 0.0
-        let key = repr(nrm.map(x => calc.round(x, digits: 5)) + (calc.round(d, digits: 5),))
+        // round first, then collapse: rounding a tiny negative yields -0.0,
+        // which would split the key from +0.0
+        let key = repr((nrm + (d,)).map(x => calc.round(x, digits: 5) + 0.0))
         if key in seen { continue }
         seen.push(key)
         let fpts = pts.filter(p => calc.abs(vdot(nrm, p) - d) < 1e-6)
