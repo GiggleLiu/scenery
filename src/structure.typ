@@ -39,10 +39,14 @@
   if explicit {
     assert(lattice.len() == 3 and atoms.len() > 0,
       message: "wyckoff: explicit form needs lattice: (v1, v2, v3) and a non-empty atoms: list")
+    for v in lattice {
+      assert(v.len() == 3, message: "wyckoff: each explicit lattice vector must have 3 components")
+    }
     let vecs = lattice.map(v => v.map(float))
     let periodic = (true, true, true)
     let alist = atoms.enumerate().map(((i, (el, frac))) => {
       let _ = element-info(el)  // validates the symbol
+      assert(frac.len() == 3, message: "wyckoff: atom " + str(i) + " needs a fractional coordinate with 3 components")
       (element: el, frac: frac.map(float), cart: frac-to-cart(vecs, frac.map(float), periodic), site: i)
     })
     return (kind: "3d", group: none, vectors: vecs, periodic: periodic, atoms: alist)

@@ -26,5 +26,6 @@
 // validation is testable without a panic
 #assert(not check-lattice-args("cubic", (a: 5.6, b: 5.6)).ok)
 #assert(not check-lattice-args("tetragonal", (a: 5.6)).ok)
+#assert(not check-lattice-args("cubic", (a: none)).ok)
 #assert(check-lattice-args("triclinic", (a: 1, b: 2, c: 3, alpha: 80, beta: 95, gamma: 103)).ok)
 Lattice OK

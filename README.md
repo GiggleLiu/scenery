@@ -96,7 +96,7 @@ When you already have expanded coordinates, skip symmetry entirely: pass three l
 | `legend` | `true` | Element color swatches beside the figure. |
 | `axes` | `true` | a/b/c orientation triad (a/b only for layer groups). |
 | `radius` | `0.45` | Sphere size as a fraction of each element's display radius. |
-| `width` | `8cm` | Rendered width of the figure. |
+| `width` | `8cm` | Rendered width of the figure. Legend and axes draw outside this width when enabled. |
 
 `crystal-group()` takes the same structure/scene options but `scale:` instead of `width:`, and returns raw cetz draw calls so you can place a structure inside a larger `cetz.canvas` alongside your own annotations.
 

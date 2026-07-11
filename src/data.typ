@@ -19,6 +19,7 @@
 #let _lg = json("/data/layergroups.json")
 
 #let group-data(kind, number) = {
+  assert(kind == "3d" or kind == "layer", message: "wyckoff: group kind must be \"3d\" or \"layer\", got " + repr(kind))
   let (table, max, name) = if kind == "3d" { (_sg, 230, "space group") } else { (_lg, 80, "layer group") }
   assert(
     type(number) == int and number >= 1 and number <= max,

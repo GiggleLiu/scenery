@@ -29,7 +29,7 @@
     }
   }
   for k in free {
-    if k not in given {
+    if k not in given or given.at(k) == none {
       return (ok: false, msg: "the " + ltype + " system requires lattice parameter '" + k + "'")
     }
   }

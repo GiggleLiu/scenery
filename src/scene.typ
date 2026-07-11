@@ -1,4 +1,4 @@
-#import "linalg.typ": vadd, vsub, vscale, vnorm, vlen, lerp
+#import "linalg.typ": vadd, vsub, vscale, vnorm, lerp
 #import "data.typ": element-info
 #import "geometry.typ": display-atoms, cell-edges, find-bonds, find-polyhedra
 #import "project.typ": projector

@@ -10,3 +10,5 @@ jobs:
       - uses: typst-community/setup-typst@v4
         with: {typst-version: '0.14.2'}
       - run: make test
+      - run: |
+          for f in examples/*.typ; do typst compile --root . "$f" "/tmp/$(basename "${f%.typ}").png"; done
