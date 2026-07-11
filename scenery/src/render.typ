@@ -9,8 +9,8 @@
 //     shadow parameters and our camera projection. All geometry is therefore
 //     computed in pure helpers BEFORE the wildcard import, and the drawing loop
 //     touches only cetz's `line`/`circle`/`content`.
-//   * colour mixing must weight explicitly, `color.mix((white, 45%), (col, 55%))`,
-//     not `white.mix((col, 55%))` (which renormalises to a much paler tone).
+//   * colour mixing must weight explicitly, `color.mix((white, 25%), (col, 75%))`,
+//     not `white.mix((col, 75%))` (which renormalises to a much paler tone).
 //     `_sphere-fill` is the guarded, pure helper carrying that weighting.
 
 #import "@preview/cetz:0.5.2"
@@ -21,13 +21,14 @@
 // --- sphere shading ---------------------------------------------------------
 
 /// The body tint of a shaded sphere of base colour `col`: the documented
-/// mid-tone `color.mix((white, 45%), (col, 55%))`. This is the pure, testable
+/// mid-tone `color.mix((white, 25%), (col, 75%))` (wyckoff parity — issue #8
+/// pixel-compares against it). This is the pure, testable
 /// guard against the `white.mix(..)` mis-weighting (see the module header); it
 /// is the mid stop of `_sphere-gradient`.
 ///
 /// - col (color): The sphere's base colour.
 /// -> color
-#let _sphere-fill(col) = color.mix((white, 45%), (col, 55%))
+#let _sphere-fill(col) = color.mix((white, 25%), (col, 75%))
 
 /// Radial "3D ball" gradient for a sphere of base colour `col`: a bright
 /// highlight up-left of centre fading through the `_sphere-fill` body and the
@@ -37,8 +38,8 @@
 /// -> gradient
 #let _sphere-gradient(col) = gradient.radial(
   (color.mix((white, 70%), (col, 30%)), 0%),
-  (_sphere-fill(col), 45%),
-  (col, 75%),
+  (_sphere-fill(col), 25%),
+  (col, 55%),
   (col.darken(30%), 100%),
   center: (35%, 30%),
   radius: 110%,

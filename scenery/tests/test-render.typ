@@ -60,15 +60,15 @@
 #assert(mordered.all(p => p.kind == "face"), message: "exploded mesh faces must all be `face`")
 
 // --- sphere-fill colour-mix guard (the CeTZ 0.5.2 weighting gotcha) -----------
-// The sphere body tint must be color.mix((white, 45%), (col, 55%)), NOT the
+// The sphere body tint must be color.mix((white, 25%), (col, 75%)), NOT the
 // mis-weighted white.mix((col, 55%)) (which renormalises to a paler tone).
 #let col = rgb("#c44e52")
 #assert(
-  _sphere-fill(col) == color.mix((white, 45%), (col, 55%)),
+  _sphere-fill(col) == color.mix((white, 25%), (col, 75%)),
   message: "sphere fill uses the wrong color.mix weighting",
 )
 #assert(
-  _sphere-fill(col) != white.mix((col, 55%)),
+  _sphere-fill(col) != white.mix((col, 75%)),
   message: "sphere fill regressed to the white.mix(..) mis-weighting",
 )
 
