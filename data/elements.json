@@ -351,7 +351,7 @@
   "color": "#00A1FF",
   "color-vesta": "#00A1FF",
   "r-atom": 1.8,
-  "r-cov": 2
+  "r-cov": 2.0
  },
  "Pb": {
   "color": "#575961",

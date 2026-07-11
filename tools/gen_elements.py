@@ -21,9 +21,12 @@ for el in Element:
     data[sym] = {
         "color": hexcolor(EL_COLORS["Jmol"].get(sym, (128, 128, 128))),
         "color-vesta": hexcolor(EL_COLORS["VESTA"].get(sym, (128, 128, 128))),
-        "r-cov": round(r_cov if r_cov is not None else r_atom, 3),
-        "r-atom": round(r_atom if r_atom is not None else r_cov, 3),
+        "r-cov": round(float(r_cov if r_cov is not None else r_atom), 3),
+        "r-atom": round(float(r_atom if r_atom is not None else r_cov), 3),
     }
+    # Schema contract: radii are always floats (json() preserves int vs float).
+    assert isinstance(data[sym]["r-cov"], float), f"{sym} r-cov not float"
+    assert isinstance(data[sym]["r-atom"], float), f"{sym} r-atom not float"
 
 assert len(data) > 90, f"only {len(data)} elements"
 assert abs(data["O"]["r-cov"] - 0.66) < 0.05
