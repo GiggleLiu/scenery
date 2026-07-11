@@ -21,7 +21,7 @@
 )
 // Every hull plane becomes one opaque, stroked triangle centred at (10, 0, 0).
 #let ico = hull-faces(ico-verts).map(f => face(
-  f.vertices.map(v => (v.at(0) + 10, v.at(1), v.at(2))),
+  f.vertices.map(v => (v.at(0) + 11.5, v.at(1), v.at(2))),
   color: col(4), fill-opacity: 0%,
 ))
 
@@ -38,4 +38,4 @@
   ico, // an array of faces; build-scene flattens nested groups
 )
 
-#render-scene(scene, camera(azimuth: 28deg, elevation: 22deg), width: 15cm)
+#render-scene(scene, camera(azimuth: 30deg, elevation: 28deg), width: 15cm)

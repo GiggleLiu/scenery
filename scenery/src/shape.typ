@@ -125,9 +125,13 @@
 /// - ..style (any): Styling hooks forwarded to the `mesh` primitive.
 /// -> dictionary
 #let uv-sphere(center, r, segments: 16, rings: 8, ..style) = {
+  assert(segments >= 3 and rings >= 2, message: "uv-sphere needs segments >= 3 and rings >= 2")
   let center = _pt(center)
-  let verts = ()
-  for i in range(rings + 1) {
+  // The poles are single shared vertices with triangle fans. Emitting a full
+  // ring of coincident pole points (the naive grid) makes every pole "quad"
+  // degenerate, which flat-shades as a pinwheel artifact around the poles.
+  let verts = (vadd(center, (0, 0, r)),)
+  for i in range(1, rings) {
     let theta = calc.pi * i / rings
     let (st, ct) = (calc.sin(theta), calc.cos(theta))
     for j in range(segments) {
@@ -135,13 +139,17 @@
       verts.push(vadd(center, (r * st * calc.cos(phi), r * st * calc.sin(phi), r * ct)))
     }
   }
-  let idx(i, j) = i * segments + calc.rem(j, segments)
+  verts.push(vadd(center, (0, 0, -r)))
+  let ring(i, j) = 1 + (i - 1) * segments + calc.rem(j, segments) // interior ring i in 1..rings-1
+  let south = 1 + (rings - 1) * segments
   let faces = ()
-  for i in range(rings) {
+  for j in range(segments) { faces.push((0, ring(1, j), ring(1, j + 1))) }
+  for i in range(1, rings - 1) {
     for j in range(segments) {
-      faces.push((idx(i, j), idx(i, j + 1), idx(i + 1, j + 1), idx(i + 1, j)))
+      faces.push((ring(i, j), ring(i, j + 1), ring(i + 1, j + 1), ring(i + 1, j)))
     }
   }
+  for j in range(segments) { faces.push((south, ring(rings - 1, j + 1), ring(rings - 1, j))) }
   mesh(verts, faces, .._solid-style(style))
 }
 
