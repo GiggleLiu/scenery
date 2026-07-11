@@ -1,6 +1,13 @@
-#import "/src/project.typ": projector
+#import "@preview/scenery:0.1.0": camera as _camera, project as _project
 #import "/src/structure.typ": structure
-#import "/src/scene.typ": build-scene
+#import "/src/figure.typ": build-scene
+
+// Adapter: wyckoff's old `projector(view)` closure over scenery's
+// `project(cam, pt)` (the projection convention now lives in the core).
+#let projector(view) = p => _project(_camera(
+  azimuth: view.at("azimuth", default: 25deg),
+  elevation: view.at("elevation", default: 15deg),
+), p)
 
 // pin the projection convention
 #let p0 = projector((azimuth: 0deg, elevation: 0deg))

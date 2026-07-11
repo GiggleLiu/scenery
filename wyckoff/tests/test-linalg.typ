@@ -1,4 +1,4 @@
-#import "/src/linalg.typ": *
+#import "@preview/scenery:0.1.0": vadd, vsub, vdot, vcross, vlen, vnorm, mvec, lerp
 
 #assert(vadd((1,2,3), (4,5,6)) == (5,7,9))
 #assert(vsub((4,5,6), (1,2,3)) == (3,3,3))
