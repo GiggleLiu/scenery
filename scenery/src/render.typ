@@ -188,15 +188,51 @@
 /// neutral lines; arrows strokes with a scaled head; faces flat-shaded, possibly
 /// translucent, filled polygons; labels content drawn last.
 ///
+/// The screen-space bounding box `(x0, y0, x1, y1)` of a scene's AABB: the span
+/// of the eight AABB corners' projected `(sx, sy)`. Placement of annotations
+/// (triad bottom-left, legend/colorbar on the right) is derived from this.
+#let _projected-screen-bbox(camera, bbox) = {
+  let (mn, mx) = (bbox.min, bbox.max)
+  let xs = ()
+  let ys = ()
+  for x in (mn.at(0), mx.at(0)) {
+    for y in (mn.at(1), mx.at(1)) {
+      for z in (mn.at(2), mx.at(2)) {
+        let q = project(camera, (x, y, z))
+        xs.push(q.sx)
+        ys.push(q.sy)
+      }
+    }
+  }
+  (calc.min(..xs), calc.min(..ys), calc.max(..xs), calc.max(..ys))
+}
+
 /// - scene (dictionary): A scene `(prims, bbox)` from `build-scene`.
 /// - camera (camera): The camera to project through.
 /// - theme (dictionary): A theme (see `default-theme`).
 /// - unit (float): Canvas units per scene unit.
+/// - axes (none, dictionary): `(vectors:, names?:)` — an axes triad placed
+///   bottom-left of the projected bbox (see `annotate.axes-triad`).
+/// - legend (none, array): `(label, color)` entries placed to the right (see
+///   `annotate.legend`).
+/// - colorbar (none, dictionary): `(colormap:, range:)` placed on the right,
+///   spanning the scene height (see `annotate.colorbar`).
 /// -> content
-#let scene-group(scene, camera, theme: default-theme, unit: 1) = {
+#let scene-group(
+  scene,
+  camera,
+  theme: default-theme,
+  unit: 1,
+  axes: none,
+  legend: none,
+  colorbar: none,
+) = {
   // All geometry resolved to plain data before the wildcard import, so the loop
   // below cannot be tripped by cetz re-exporting `project`/`scale`.
   let records = sort-prims(scene.prims, camera).map(p => _record(camera, unit, theme, p))
+  // Annotation placement, in canvas coords (screen projection times `unit`).
+  let sb = _projected-screen-bbox(camera, scene.bbox)
+  let (x0, y0, x1, y1) = (sb.at(0) * unit, sb.at(1) * unit, sb.at(2) * unit, sb.at(3) * unit)
   import cetz.draw: *
   for r in records {
     if r.kind == "sphere" {
@@ -209,6 +245,26 @@
       line(..r.pts, close: true, fill: r.fill, stroke: r.stroke)
     } else if r.kind == "label" {
       content(r.pos, r.body)
+    }
+  }
+  // Annotation furniture, drawn on top of the scene. Deferred import breaks the
+  // render <-> annotate reference cycle (annotate reuses `_sphere-gradient`).
+  if axes != none or legend != none or colorbar != none {
+    import "annotate.typ": axes-triad as _triad-cmd, legend as _legend-cmd, colorbar as _colorbar-cmd
+    if axes != none {
+      _triad-cmd(
+        camera,
+        axes.vectors,
+        names: axes.at("names", default: ("x", "y", "z")),
+        origin: (x0 - 0.5, y0 - 0.5),
+      )
+    }
+    if legend != none {
+      _legend-cmd(legend, origin: (x1 + 0.7, y1))
+    }
+    if colorbar != none {
+      let cx = x1 + (if legend != none { 2.4 } else { 0.7 })
+      _colorbar-cmd(colorbar.colormap, colorbar.range, origin: (cx, y0), height: y1 - y0)
     }
   }
 }
@@ -237,9 +293,30 @@
 /// - camera (camera): The camera to project through.
 /// - width (length): Target on-page width of the scene's bounding box.
 /// - theme (dictionary): A theme (see `default-theme`).
+/// - axes (none, dictionary): `(vectors:, names?:)` axes-triad spec, placed
+///   bottom-left (see `scene-group`).
+/// - legend (none, array): `(label, color)` legend entries, placed right.
+/// - colorbar (none, dictionary): `(colormap:, range:)` colorbar spec, placed
+///   right.
 /// -> content
-#let render-scene(scene, camera, width: 8cm, theme: default-theme) = {
+#let render-scene(
+  scene,
+  camera,
+  width: 8cm,
+  theme: default-theme,
+  axes: none,
+  legend: none,
+  colorbar: none,
+) = {
   let w = _projected-width(camera, scene.bbox)
   let unit = if w > 0 { (width / 1cm) / w } else { 1.0 }
-  cetz.canvas(length: 1cm, scene-group(scene, camera, theme: theme, unit: unit))
+  cetz.canvas(length: 1cm, scene-group(
+    scene,
+    camera,
+    theme: theme,
+    unit: unit,
+    axes: axes,
+    legend: legend,
+    colorbar: colorbar,
+  ))
 }
