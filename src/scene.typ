@@ -13,6 +13,7 @@
   polyhedra: (),        // element list
   radius: 0.45,
   bond-width: 0.16,
+  labels: false,
 ) = {
   let proj = projector(view)
   let shown = display-atoms(structure, supercell: supercell)
@@ -23,6 +24,13 @@
     let s = proj(a.cart)
     prims.push((kind: "sphere", c: (s.sx, s.sy), r: rdisp(a.element),
       color: element-info(a.element).color, element: a.element, depth: s.depth))
+  }
+  if labels {
+    // depth 1e9 sorts labels after every geometric primitive: drawn last.
+    for a in shown {
+      let s = proj(a.cart)
+      prims.push((kind: "label", at: (s.sx, s.sy), text: a.element, depth: 1e9))
+    }
   }
 
   let blist = if bonds == none { () } else { find-bonds(shown, bonds) }
@@ -68,6 +76,8 @@
       ys += (p.c.at(1) - p.r, p.c.at(1) + p.r)
     } else if p.kind == "face" {
       xs += p.pts.map(q => q.at(0)); ys += p.pts.map(q => q.at(1))
+    } else if p.kind == "label" {
+      // sits on a sphere center: already inside the sphere's bbox
     } else {
       xs += (p.a.at(0), p.b.at(0)); ys += (p.a.at(1), p.b.at(1))
     }

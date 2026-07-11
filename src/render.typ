@@ -1,4 +1,7 @@
 #import "@preview/cetz:0.5.2"
+#import "data.typ": element-info
+#import "project.typ": projector
+#import "linalg.typ": vnorm
 
 /// Radial "3D ball" fill: bright highlight up-left of center fading through
 /// the base color to a darkened rim. Stops are (color, offset) pairs.
@@ -80,19 +83,44 @@
       circle(pt(p.c), radius: p.r * s,
         fill: _sphere-fill(p.color),
         stroke: (paint: p.color.darken(45%), thickness: 0.5pt))
+    } else if p.kind == "label" {
+      content(pt(p.at), text(size: 7pt, fill: black, weight: "bold", p.text))
     }
   }
 }
 
 /// Render a scene to content: a cetz canvas scaled so the scene's bbox
-/// width equals `width`. `legend` and `axes-info` are wired in Task 13;
-/// the signature is stable now.
+/// width equals `width`. `legend: true` adds element swatch rows right of
+/// the bbox; `axes-info: (vectors, view, n-axes?)` adds an a/b/c triad of
+/// the projected lattice directions below-left of the bbox (pass
+/// `n-axes: 2` for layer structures to omit c).
 #let render(scene, width: 8cm, legend: true, axes-info: none) = {
   let (x0, y0, x1, y1) = scene.bbox
   let s = (width / 1cm) / (x1 - x0)
   cetz.canvas(length: 1cm, {
     import cetz.draw: *
     draw-scene(scene, scale: s)
-    // legend and axes are added in Task 13; keep parameters stable now
+    if legend {
+      for (i, el) in scene.elements.enumerate() {
+        let y = y1 * s - i * 0.55
+        circle((x1 * s + 0.7, y), radius: 0.16,
+          fill: _sphere-fill(element-info(el).color),
+          stroke: (paint: element-info(el).color.darken(45%), thickness: 0.4pt))
+        content((x1 * s + 1.0, y), anchor: "west", text(size: 9pt, el))
+      }
+    }
+    if axes-info != none {
+      let proj = projector(axes-info.view)
+      let names = ("a", "b", "c")
+      let origin = (x0 * s - 0.5, y0 * s - 0.5)
+      let naxes = axes-info.at("n-axes", default: 3)
+      for i in range(naxes) {
+        let d = proj(vnorm(axes-info.vectors.at(i)))
+        let tip = (origin.at(0) + d.sx * 0.7, origin.at(1) + d.sy * 0.7)
+        line(origin, tip, mark: (end: ">", fill: black), stroke: 0.7pt)
+        content((origin.at(0) + d.sx * 0.95, origin.at(1) + d.sy * 0.95),
+          text(size: 8pt, style: "italic", names.at(i)))
+      }
+    }
   })
 }
