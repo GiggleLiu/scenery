@@ -149,6 +149,22 @@ With `bonds: auto`, two atoms are bonded when their distance is at most 1.15× t
 
 The MoS₂ figure in the gallery uses exactly this rule. `bonds: none` disables bonds entirely.
 
+### Render modes
+
+`crystal()`, `crystal-group()` and `molecule()` take a `mode:` option:
+
+- `"ball-and-stick"` (default) — covalent-scale balls and two-tone sticks.
+- `"space-filling"` (alias `"cpk"`) — spheres at the van der Waals radius,
+  no bonds, no polyhedra; `radius:` scales the vdW radii (default 1.0).
+- `"licorice"` — uniform thin sticks with matching end caps; atom size is
+  independent of the element.
+
+Bonds are split at the midpoint into two atom-coloured halves by default;
+pass `bond-color: <color>` to draw each bond as a single stick in that color
+instead (ball-and-stick and licorice).
+
+<img src="images/render-modes.png" width="760">
+
 ## Prototypes
 
 Each prototype is a one-liner returning a `structure` value; lattice parameters are in Å.
