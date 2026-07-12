@@ -24,6 +24,26 @@ fn hexagonal_cell_matches_typst_convention() {
 }
 
 #[test]
+fn cell_to_vectors_triclinic_matches_expected() {
+    // Expected values computed INDEPENDENTLY with python3 (standard convention,
+    // matching wyckoff/src/lattice.typ lattice-vectors) — NOT recomputed inline:
+    //   a=3, b=4, c=5, alpha=80°, beta=95°, gamma=110°
+    // Pins v3's cross-term cy to a specific nonzero value; a sign error or
+    // transposition in cell_to_vectors would fail here.
+    let l = cell_to_vectors(3.0, 4.0, 5.0, 80.0, 95.0, 110.0).unwrap();
+    let expected = [
+        [3.0, 0.0, 0.0],
+        [-1.3680805733026749, 3.7587704831436337, 0.0],
+        [-0.4357787137382912, 0.765352173992927, 4.9218221181201685],
+    ];
+    for i in 0..3 {
+        for j in 0..3 {
+            assert!(close(l[i][j], expected[i][j]), "l[{}][{}] = {} != {}", i, j, l[i][j], expected[i][j]);
+        }
+    }
+}
+
+#[test]
 fn frac_cart_round_trip_triclinic() {
     let l = cell_to_vectors(4.0, 5.0, 6.0, 80.0, 95.0, 110.0).unwrap();
     let f = [0.12, 0.34, 0.56];
