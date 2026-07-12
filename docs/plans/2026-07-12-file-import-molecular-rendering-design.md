@@ -45,6 +45,14 @@ file bytes ──► [Rust wyckoff-io.wasm] ──► normalized record ──�
 - **Symmetry expansion stays in Typst.** CIF returns a spacegroup number + asymmetric unit; wyckoff expands it through its **existing** pyxtal/pymatgen-cross-validated tables. We do not reimplement crystallography in Rust.
 - **Projection/depth-sort/BSP in Rust, styling in Typst.** The Rust engine returns *ordered, split* primitives with depth keys; Typst still owns colors, gradients, opacity, themes. Rendering identity is unchanged; only the geometry pipeline is accelerated. The pure-Typst path in `render.typ` remains the default for small scenes and the fallback; the WASM engine is the robust/large path.
 
+### Host-agnostic core (future JavaScript reuse)
+
+The `wyckoff-io` crate is written **host-agnostic**: zero Typst/CeTZ assumptions, a stable serialized data contract (structure records in; primitives-with-depth out). All rendering — colors, gradients, themes, vector emission — stays on the Typst side, because a Typst plugin is pure bytes-in/bytes-out and *cannot* emit Typst content. This is a deliberate boundary, not an accident:
+
+- **"Move most features to WASM" is not the goal, and isn't possible.** The painting layer is structurally Typst-side; only compute (parsing, projection, depth-sort, BSP, geometry) moves to Rust.
+- **JS compatibility is not gated by WASM.** Typst already runs on the web (typst.app / typst.ts are WASM builds of the compiler), so a pure-Typst package already works in a browser. The *only* thing the Rust core buys for JavaScript is reuse **outside** Typst — a future standalone web viewer that loads the same `.wasm`, gets geometry back, and paints with its own Canvas/WebGL/SVG.
+- **Keep the door open, don't walk through it now (YAGNI).** No JS renderer or JS bindings this milestone; just enforce the host-agnostic contract so the option stays free.
+
 ### Typst Universe compatibility
 
 WASM plugins are a first-class Typst feature and Universe-publishable; adding Rust does **not** block registration. Constraints the crate must honor:
