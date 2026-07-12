@@ -7,7 +7,7 @@ description = "Host-agnostic structure-file parsing and geometry for the wyckoff
 repository = "https://github.com/GiggleLiu/scenery"
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 wasm-minimal-protocol = "0.1"

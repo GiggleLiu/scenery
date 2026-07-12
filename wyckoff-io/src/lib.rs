@@ -1,15 +1,27 @@
+#[cfg(target_arch = "wasm32")]
 use wasm_minimal_protocol::*;
 
+pub mod record;
+pub mod xyz;
+
+#[cfg(target_arch = "wasm32")]
 initiate_protocol!();
 
-#[wasm_func]
+#[cfg_attr(target_arch = "wasm32", wasm_func)]
 pub fn version() -> Vec<u8> {
     format!("wyckoff-io {}", env!("CARGO_PKG_VERSION")).into_bytes()
 }
 
-#[wasm_func]
+#[cfg_attr(target_arch = "wasm32", wasm_func)]
 pub fn echo(input: &[u8]) -> Vec<u8> {
     input.to_vec()
+}
+
+#[cfg_attr(target_arch = "wasm32", wasm_func)]
+pub fn parse_xyz(input: &[u8]) -> Result<Vec<u8>, String> {
+    let text = std::str::from_utf8(input).map_err(|e| e.to_string())?;
+    let record = xyz::parse(text)?;
+    serde_json::to_vec(&record).map_err(|e| e.to_string())
 }
 
 #[cfg(test)]
