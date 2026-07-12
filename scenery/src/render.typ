@@ -31,20 +31,38 @@
 /// -> color
 #let _sphere-fill(col) = color.mix((white, 25%), (col, 75%))
 
-/// Radial "3D ball" gradient for a sphere of base colour `col`: a bright
-/// highlight up-left of centre fading through the `_sphere-fill` body and the
-/// base colour to a darkened rim.
+/// Radial "3D ball" gradient for a sphere of base colour `col`. With
+/// `specular: true` (the default): a tight near-white specular core fading
+/// through the classic highlight and the `_sphere-fill` body tint to a
+/// darkened rim. `specular: false` reproduces the pre-specular four-stop
+/// gradient exactly (the classic look, selectable per sphere or per theme via
+/// the `specular` style hook). The sphere's thin outline is separate: the
+/// theme's `stroke-width`/`stroke-darken` hooks on the drawn circle.
 ///
 /// - col (color): The sphere's base colour.
+/// - specular (bool): Add the specular highlight stop (default) or keep the
+///   classic gradient.
 /// -> gradient
-#let _sphere-gradient(col) = gradient.radial(
-  (color.mix((white, 70%), (col, 30%)), 0%),
-  (_sphere-fill(col), 25%),
-  (col, 55%),
-  (col.darken(30%), 100%),
-  center: (35%, 30%),
-  radius: 110%,
-)
+#let _sphere-gradient(col, specular: true) = if specular {
+  gradient.radial(
+    (color.mix((white, 92%), (col, 8%)), 0%),
+    (color.mix((white, 70%), (col, 30%)), 12%),
+    (_sphere-fill(col), 30%),
+    (col, 58%),
+    (col.darken(35%), 100%),
+    center: (35%, 30%),
+    radius: 110%,
+  )
+} else {
+  gradient.radial(
+    (color.mix((white, 70%), (col, 30%)), 0%),
+    (_sphere-fill(col), 25%),
+    (col, 55%),
+    (col.darken(30%), 100%),
+    center: (35%, 30%),
+    radius: 110%,
+  )
+}
 
 // --- depth sorting (pure) ---------------------------------------------------
 
@@ -524,6 +542,7 @@
       pos: (q.sx * unit, q.sy * unit),
       radius: p.r * project-scale(camera, q.depth) * unit,
       color: st.color,
+      specular: st.at("specular", default: true),
       stroke: (paint: st.color.darken(st.stroke-darken), thickness: st.stroke-width),
     )
   } else if k == "seg" {
@@ -663,7 +682,7 @@
   }
   for r in records {
     if r.kind == "sphere" {
-      circle(r.pos, radius: r.radius, fill: _sphere-gradient(r.color), stroke: r.stroke)
+      circle(r.pos, radius: r.radius, fill: _sphere-gradient(r.color, specular: r.specular), stroke: r.stroke)
     } else if r.kind == "seg" or r.kind == "edge" {
       line(r.a, r.b, stroke: r.stroke)
     } else if r.kind == "arrow" {
