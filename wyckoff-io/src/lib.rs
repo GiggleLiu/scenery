@@ -1,6 +1,7 @@
 #[cfg(target_arch = "wasm32")]
 use wasm_minimal_protocol::*;
 
+pub mod geom;
 pub mod record;
 pub mod xyz;
 
