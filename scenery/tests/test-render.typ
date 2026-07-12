@@ -1,7 +1,9 @@
-#import "/src/scene.typ": sphere, seg, edge, arrow, face, label, build-scene
+#import "/src/scene.typ": sphere, seg, edge, arrow, face, mesh, label, build-scene
 #import "/src/shape.typ": uv-sphere, cylinder
 #import "/src/camera.typ": camera
-#import "/src/render.typ": sort-prims, render-scene, _sphere-fill, _clip-lines
+#import "/src/style.typ": default-theme
+#import "/src/render.typ": sort-prims, scene-group, render-scene, _sphere-fill, _clip-lines, _prepare-faces, _record
+#import "@preview/cetz:0.5.2"
 
 // A camera with azimuth = elevation = 0 projects (x, y, z) to
 // (sx: x, sy: z, depth: y): the depth key is simply the y coordinate. That
@@ -116,12 +118,139 @@
   message: "two spheres should split a line into three fragments",
 )
 
+// Arrows share the exact line/sphere visibility path. Only the terminal visible
+// fragment keeps the mark, so splitting never duplicates an arrowhead.
+#let clipped-arrow = _clip-lines(
+  (sphere((0, 0, 0), 1), arrow((-2, 0, 0), (2, 0, 0))), cam0,
+)
+#let arrow-parts = clipped-arrow.filter(p => p.kind == "arrow")
+#assert(arrow-parts.len() == 2, message: "sphere must split a crossing arrow")
+#assert(
+  not arrow-parts.first().draw-head and arrow-parts.last().draw-head,
+  message: "only the terminal arrow fragment may retain its head",
+)
+#let hidden-tip = _clip-lines(
+  (sphere((0, 0, 0), 1), arrow((-2, 0, 0), (0, 0, 0))), cam0,
+).filter(p => p.kind == "arrow")
+#assert(hidden-tip.len() == 1 and not hidden-tip.first().draw-head,
+  message: "an occluded arrow tip must not leave a floating head")
+
+// Multiple disjoint occluders produce multiple shaft fragments, still with one
+// terminal head. A distant sphere exercises the broad-phase rejection path and
+// must leave geometry byte-for-byte equivalent to the no-sphere case.
+#let multi-arrow = _clip-lines(
+  (
+    sphere((-1, 0, 0), 0.5), sphere((1, 0, 0), 0.5),
+    arrow((-3, 0, 0), (3, 0, 0)),
+  ), cam0,
+).filter(p => p.kind == "arrow")
+#assert(multi-arrow.len() == 3)
+#assert(multi-arrow.filter(p => p.draw-head).len() == 1 and multi-arrow.last().draw-head)
+#let bare-arrow = _clip-lines((arrow((-2, 0, 0), (2, 0, 0)),), cam0)
+#let broad-phase-arrow = _clip-lines(
+  (sphere((100, 0, 100), 1), arrow((-2, 0, 0), (2, 0, 0))), cam0,
+).filter(p => p.kind == "arrow")
+#assert(broad-phase-arrow == bare-arrow,
+  message: "broad-phase rejection must preserve an unrelated arrow exactly")
+
+// An opaque planar face hides only the portion of a changing-depth line that
+// lies both inside its projection and behind its plane. Under cam0, depth == y.
+#let screen-face = face(
+  ((-1, 0, -1), (1, 0, -1), (1, 0, 1), (-1, 0, 1)),
+  fill-opacity: 0%,
+)
+#let face-crossing = _clip-lines(
+  (screen-face, seg((-2, -1, 0), (2, 1, 0))), cam0,
+).filter(p => p.kind == "seg")
+#assert(face-crossing.len() == 3,
+  message: "opaque face must remove only the rear projected interval")
+#assert(calc.abs(face-crossing.first().b.at(0) + 1) < 1e-9)
+#assert(calc.abs(face-crossing.at(1).a.at(0)) < 1e-9)
+#assert(face-crossing.last().b == (2, 1, 0))
+
+// Face visibility is unit-invariant. The same geometry at micro and mega scale
+// must retain the same fragment topology and normalized cut positions.
+#for scale in (1e-6, 1e6) {
+  let scaled(p) = p.map(x => x * scale)
+  let tiny-or-large = _clip-lines(
+    (
+      face(screen-face.pts.map(scaled), fill-opacity: 0%),
+      seg(scaled((-2, -1, 0)), scaled((2, 1, 0))),
+    ), cam0,
+  ).filter(p => p.kind == "seg")
+  assert(tiny-or-large.len() == 3,
+    message: "face clipping changed under scale " + repr(scale))
+  assert(calc.abs(tiny-or-large.first().b.at(0) / scale + 1) < 1e-9)
+  assert(calc.abs(tiny-or-large.at(1).a.at(0) / scale) < 1e-9)
+}
+
+// A translucent face never erases data. It may split the line at visibility
+// boundaries to improve painter keys, but the fragments cover the full line.
+#let translucent-crossing = _clip-lines(
+  ((..screen-face, fill-opacity: 55%), seg((-2, -1, 0), (2, 1, 0))), cam0,
+).filter(p => p.kind == "seg")
+#assert(translucent-crossing.first().a == (-2, -1, 0))
+#assert(translucent-crossing.last().b == (2, 1, 0))
+#for i in range(1, translucent-crossing.len()) {
+  assert(translucent-crossing.at(i - 1).b == translucent-crossing.at(i).a,
+    message: "translucent face split must preserve the complete line")
+}
+
 // --- meshes explode into independently-sorted per-face primitives ------------
 // A 6-sided capped cylinder has 6 + 2 = 8 faces; each becomes its own face prim.
 #let msc = build-scene(cylinder((0, 0, 0), (0, 0, 2), 1, segments: 6))
 #let mordered = sort-prims(msc.prims, cam0)
 #assert(mordered.len() == 8, message: "mesh should explode to 8 faces, got " + str(mordered.len()))
 #assert(mordered.all(p => p.kind == "face"), message: "exploded mesh faces must all be `face`")
+
+// Adaptive mesh visibility: opaque closed meshes cull rear faces, translucent
+// meshes keep both sides (rear faces are tagged for quieter hidden strokes), and
+// an explicit `cull: none` restores all-face rendering.
+#let cube-v = (
+  (-1,-1,-1), (1,-1,-1), (1,1,-1), (-1,1,-1),
+  (-1,-1, 1), (1,-1, 1), (1,1, 1), (-1,1, 1),
+)
+#let cube-f = (
+  (0,3,2,1), (4,5,6,7), (0,1,5,4),
+  (1,2,6,5), (2,3,7,6), (3,0,4,7),
+)
+#let opaque-cube = _prepare-faces(
+  (mesh(cube-v, cube-f, fill-opacity: 0%),), cam0,
+)
+#assert(opaque-cube.len() == 5,
+  message: "axis-on opaque cube should drop its rear face and retain silhouette faces")
+#let translucent-cube = _prepare-faces(
+  (mesh(cube-v, cube-f, fill-opacity: 55%),), cam0,
+)
+#assert(translucent-cube.len() == 6)
+#assert(translucent-cube.filter(p => p.at("rear-face", default: false)).len() == 1)
+#let rear-record = _record(
+  cam0, 1, default-theme,
+  translucent-cube.find(p => p.at("rear-face", default: false)),
+)
+#assert(rear-record.stroke.paint != default-theme.face.color.darken(default-theme.face.stroke-darken),
+  message: "translucent rear edge should be visually quieter than the visible outline")
+#let no-rear-stroke = _prepare-faces(
+  (mesh(cube-v, cube-f, fill-opacity: 55%, hidden-stroke: none),), cam0,
+).find(p => p.at("rear-face", default: false))
+#assert(_record(cam0, 1, default-theme, no-rear-stroke).stroke == none)
+#let uncull-cube = _prepare-faces(
+  (mesh(cube-v, cube-f, fill-opacity: 0%, cull: none),), cam0,
+)
+#assert(uncull-cube.len() == 6)
+#let front-culled-cube = _prepare-faces(
+  (mesh(cube-v, cube-f, fill-opacity: 0%, cull: "front"),), cam0,
+)
+#assert(front-culled-cube.len() == 5)
+#assert(front-culled-cube.filter(p => p.at("rear-face", default: false)).len() == 1)
+#for scale in (1e-6, 1e6) {
+  let scaled(p) = p.map(x => x * scale)
+  let scaled-cube = _prepare-faces(
+    (mesh(cube-v.map(scaled), cube-f, fill-opacity: 0%),), cam0,
+  )
+  assert(scaled-cube.len() == 5,
+    message: "adaptive culling changed under scale " + repr(scale))
+}
 
 // --- sphere-fill colour-mix guard (the CeTZ 0.5.2 weighting gotcha) -----------
 // The sphere body tint must be color.mix((white, 25%), (col, 75%)), NOT the
@@ -153,3 +282,15 @@ Render sort OK
   label((1, 1, 2.2), [top]),
 )
 #render-scene(demo, camera(), width: 6cm)
+
+// Standalone rendering disables anchor-node emission internally. Composed
+// callers may make the same performance choice explicitly when no later CeTZ
+// command references the logical names; the default registering path is covered
+// in test-anchors.typ.
+#cetz.canvas(length: 1cm, {
+  scene-group(
+    build-scene(sphere((0, 0, 0), 0.4, name: "unexported")),
+    cam0,
+    register-anchors: false,
+  )
+})

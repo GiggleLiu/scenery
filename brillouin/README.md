@@ -119,7 +119,7 @@ The k-point **labels** follow the HPKOT standardization (Hinuma et al. 2017) as 
 - **Standardized cells only.** Formulas are evaluated on the SC-2010 standardized conventional cell (orthorhombic a ≤ b ≤ c, monoclinic unique axis b with β ≥ 90°, hexagonal setting for hR). Pass parameters in that setting.
 - **No Niggli reduction.** Triclinic (aP) variant selection assumes an already-reduced cell (its reciprocal cell all-acute or all-obtuse); a non-reduced aP cell raises an error rather than silently mislabelling. Reduce it first.
 - **mC from parameters is not supported.** Base-centered monoclinic has no closed-form primitive cell in this layer; pass its primitive vectors directly as `lattice`.
-- **Painter's algorithm.** The zone is translucent, so `scenery`'s whole-primitive depth sort can occasionally order an interior path segment against a face imperfectly; it reads correctly for the standard zones.
+- **Painter's algorithm.** The zone is translucent, so intersecting faces can still order imperfectly. `scenery` splits path lines at face boundaries and renders rear zone edges more quietly, which keeps the standard zones legible without pretending to provide a z-buffer.
 - **A companion panel, not a plotting library.** `band-panel` is deliberately minimal — no auto-ticked energy axis, no legends. Use [lilaq](https://typst.app/universe/package/lilaq) for publication plots.
 
 ## Roadmap

@@ -15,7 +15,7 @@
 
 #import "@preview/cetz:0.5.2"
 #import "camera.typ": project
-#import "linalg.typ": vadd, vscale
+#import "linalg.typ": vadd, vsub, vscale, vdot, vcross, vlen
 #import "style.typ": default-theme, resolve-style, face-brightness
 #import "anchors.typ": resolve-scene
 
@@ -75,11 +75,96 @@
       for (kk, vv) in p {
         if kk not in ("kind", "vertices", "faces") { hooks.insert(kk, vv) }
       }
+      let mesh-center = _centroid(p.vertices)
       for f in p.faces {
-        out.push((kind: "face", pts: f.map(i => p.vertices.at(i)), ..hooks))
+        out.push((
+          kind: "face",
+          pts: f.map(i => p.vertices.at(i)),
+          mesh-face: true,
+          mesh-center: mesh-center,
+          ..hooks,
+        ))
       }
     } else {
       out.push(p)
+    }
+  }
+  out
+}
+
+// Unit camera direction in which projected depth increases (toward the viewer).
+#let _camera-depth-direction(camera) = if camera.mode == "2d" {
+  (0.0, 0.0, 1.0)
+} else {
+  let az = camera.azimuth
+  let el = camera.elevation
+  (-calc.sin(az) * calc.cos(el), calc.cos(az) * calc.cos(el), calc.sin(el))
+}
+
+// A stable non-degenerate normal for a polygon, or `none` when its vertices are
+// collinear. Mesh normals are oriented away from the mesh centroid so culling
+// remains correct even when a generator's cap winding is inconsistent.
+#let _face-normal(p) = {
+  if p.pts.len() < 3 { return none }
+  let origin = p.pts.first()
+  let normal = none
+  for i in range(1, p.pts.len() - 1) {
+    let e1 = vsub(p.pts.at(i), origin)
+    let e2 = vsub(p.pts.at(i + 1), origin)
+    let n = vcross(e1, e2)
+    let area-scale = vlen(e1) * vlen(e2)
+    if area-scale > 0 and vlen(n) > 1e-12 * area-scale { normal = n; break }
+  }
+  if normal == none { return none }
+  let mesh-center = p.at("mesh-center", default: none)
+  if mesh-center != none and vdot(normal, vsub(_centroid(p.pts), mesh-center)) < 0 {
+    normal = vscale(normal, -1)
+  }
+  normal
+}
+
+// `true` for a face whose outward normal points away from the viewer, `false`
+// for a viewer-facing face, and `none` for an edge-on/degenerate face.
+#let _face-is-rear(p, camera) = {
+  let n = _face-normal(p)
+  if n == none { return none }
+  let facing = vdot(n, _camera-depth-direction(camera))
+  let eps = 1e-12 * vlen(n)
+  if calc.abs(facing) <= eps { none } else { facing < 0 }
+}
+
+/// Explodes meshes and applies their camera-aware face-visibility policy.
+///
+/// Opaque mesh faces cull rear faces by default. Translucent meshes and bare
+/// faces retain both sides; retained rear faces are tagged for quiet strokes.
+#let _prepare-faces(prims, camera, theme: default-theme) = {
+  let out = ()
+  for p in _explode(prims) {
+    if p.kind != "face" {
+      out.push(p)
+      continue
+    }
+    let st = resolve-style(theme, p)
+    let opaque = st.at("fill-opacity", default: 0%) == 0%
+    let adaptive = p.at("mesh-face", default: false) and opaque
+    let cull = st.at("cull", default: if adaptive { "back" } else { none })
+    assert(
+      cull in (none, "back", "front"),
+      message: "face cull must be none, \"back\", or \"front\"; got " + repr(cull),
+    )
+    let rear = _face-is-rear(p, camera)
+    let drop = rear != none and (
+      (cull == "back" and rear) or (cull == "front" and not rear)
+    )
+    if not drop {
+      let q = p
+      // Bare faces have no inherent outward-winding contract, so their default
+      // appearance must not depend on vertex order. Rear styling is automatic
+      // for meshes and opt-in for a bare face through `hidden-stroke`.
+      if rear == true and (p.at("mesh-face", default: false) or "hidden-stroke" in st) {
+        q.insert("rear-face", true)
+      }
+      out.push(q)
     }
   }
   out
@@ -127,13 +212,21 @@
 // orthographic camera. Behind the centre plane, the whole projected disk hides
 // the line. In front of that plane, only the part inside the actual sphere is
 // hidden; a line nearer than the sphere's front surface remains visible.
-#let _line-sphere-occlusion(a, b, sp, camera) = {
-  let pa = project(camera, a)
-  let pb = project(camera, b)
-  let pc = project(camera, sp.center)
-  let (qx, qy) = (pa.sx - pc.sx, pa.sy - pc.sy)
+#let _projected-sphere(sp, camera) = {
+  let p = project(camera, sp.center)
+  (sx: p.sx, sy: p.sy, depth: p.depth, r: sp.r)
+}
+
+#let _overlap1(a0, a1, b0, b1) = calc.min(a0, a1) <= calc.max(b0, b1) and calc.max(a0, a1) >= calc.min(b0, b1)
+
+#let _line-bbox-overlaps-disk(pa, pb, sp) = {
+  _overlap1(pa.sx, pb.sx, sp.sx - sp.r, sp.sx + sp.r) and _overlap1(pa.sy, pb.sy, sp.sy - sp.r, sp.sy + sp.r)
+}
+
+#let _line-sphere-occlusion(pa, pb, sp) = {
+  let (qx, qy) = (pa.sx - sp.sx, pa.sy - sp.sy)
   let (dx, dy) = (pb.sx - pa.sx, pb.sy - pa.sy)
-  let h0 = pa.depth - pc.depth
+  let h0 = pa.depth - sp.depth
   let dh = pb.depth - pa.depth
   let aa = dx * dx + dy * dy
   let bb = 2 * (qx * dx + qy * dy)
@@ -175,27 +268,164 @@
 
 #let _lerp-point(a, b, t) = vadd(vscale(a, 1 - t), vscale(b, t))
 
-/// Splits line primitives into the portions visible around opaque spheres.
+#let _cross2(a, b) = a.at(0) * b.at(1) - a.at(1) * b.at(0)
+
+#let _point-in-polygon(q, pts) = {
+  let inside = false
+  let j = pts.len() - 1
+  for i in range(pts.len()) {
+    let pi = pts.at(i)
+    let pj = pts.at(j)
+    let crosses = (pi.at(1) > q.at(1)) != (pj.at(1) > q.at(1))
+    if crosses {
+      let numerator = (pj.at(0) - pi.at(0)) * (q.at(1) - pi.at(1))
+      let x = numerator / (pj.at(1) - pi.at(1)) + pi.at(0)
+      if q.at(0) < x { inside = not inside }
+    }
+    j = i
+  }
+  inside
+}
+
+// Cached projected/planar data for one face. Non-planar and edge-on polygons
+// return `none`: they still draw, but cannot be exact line occluders.
+#let _face-occluder(p, camera, theme) = {
+  let normal = _face-normal(p)
+  if normal == none { return none }
+  let origin = p.pts.first()
+  let scale = 0.0
+  for q in p.pts { scale = calc.max(scale, vlen(vsub(q, origin))) }
+  let planar-eps = 1e-8 * vlen(normal) * scale
+  if p.pts.any(q => calc.abs(vdot(normal, vsub(q, origin))) > planar-eps) {
+    return none
+  }
+  let view-dot = vdot(normal, _camera-depth-direction(camera))
+  if calc.abs(view-dot) <= 1e-12 * vlen(normal) { return none }
+  let screen = p.pts.map(q => {
+    let s = project(camera, q)
+    (s.sx, s.sy)
+  })
+  let xs = screen.map(q => q.at(0))
+  let ys = screen.map(q => q.at(1))
+  let st = resolve-style(theme, p)
+  (
+    origin: origin,
+    normal: normal,
+    view-dot: view-dot,
+    scale: scale,
+    screen: screen,
+    bounds: (calc.min(..xs), calc.min(..ys), calc.max(..xs), calc.max(..ys)),
+    opaque: st.at("fill-opacity", default: 0%) == 0%,
+  )
+}
+
+#let _line-bbox-overlaps-face(pa, pb, face) = {
+  let b = face.bounds
+  _overlap1(pa.sx, pb.sx, b.at(0), b.at(2)) and _overlap1(pa.sy, pb.sy, b.at(1), b.at(3))
+}
+
+// Projected polygon cuts plus the intervals an opaque face hides. Translucent
+// faces contribute cuts only, improving fragment depth keys without erasing data.
+#let _line-face-interaction(a, b, pa, pb, face) = {
+  let param-eps = 1e-12
+  let p0 = (pa.sx, pa.sy)
+  let d = (pb.sx - pa.sx, pb.sy - pa.sy)
+  let dlen = calc.sqrt(d.at(0) * d.at(0) + d.at(1) * d.at(1))
+  let cuts = (0.0, 1.0)
+  for i in range(face.screen.len()) {
+    let q0 = face.screen.at(i)
+    let q1 = face.screen.at(calc.rem(i + 1, face.screen.len()))
+    let e = (q1.at(0) - q0.at(0), q1.at(1) - q0.at(1))
+    let rel = (q0.at(0) - p0.at(0), q0.at(1) - p0.at(1))
+    let den = _cross2(d, e)
+    let elen = calc.sqrt(e.at(0) * e.at(0) + e.at(1) * e.at(1))
+    if dlen > 0 and elen > 0 and calc.abs(den) > 1e-12 * dlen * elen {
+      let t = _cross2(rel, e) / den
+      let u = _cross2(rel, d) / den
+      if t > param-eps and t < 1 - param-eps and u >= -param-eps and u <= 1 + param-eps {
+        cuts.push(t)
+      }
+    }
+  }
+  let s0 = vdot(face.normal, vsub(a, face.origin))
+  let s1 = vdot(face.normal, vsub(b, face.origin))
+  if s0 * s1 < 0 {
+    let t = s0 / (s0 - s1)
+    if t > param-eps and t < 1 - param-eps { cuts.push(t) }
+  }
+  cuts = cuts.sorted()
+  let unique = ()
+  for t in cuts {
+    if unique.len() == 0 or t - unique.last() > param-eps { unique.push(t) }
+  }
+  let hidden = ()
+  if face.opaque {
+    for i in range(unique.len() - 1) {
+      let lo = unique.at(i)
+      let hi = unique.at(i + 1)
+      let mid = (lo + hi) / 2
+      let q = (p0.at(0) + d.at(0) * mid, p0.at(1) + d.at(1) * mid)
+      if _point-in-polygon(q, face.screen) {
+        let world = _lerp-point(a, b, mid)
+        let toward-viewer = -vdot(face.normal, vsub(world, face.origin)) / face.view-dot
+        let depth-eps = 1e-12 * calc.max(vlen(vsub(b, a)), face.scale)
+        if toward-viewer > depth-eps { hidden.push((lo, hi)) }
+      }
+    }
+  }
+  (cuts: unique, hidden: hidden)
+}
+
+#let _line-points(p) = if p.kind == "arrow" { (p.from, p.to) } else { (p.a, p.b) }
+
+#let _line-fragment(p, a, b, interval, eps) = {
+  let q = p
+  if p.kind == "arrow" {
+    q.insert("from", _lerp-point(a, b, interval.at(0)))
+    q.insert("to", _lerp-point(a, b, interval.at(1)))
+    q.insert("draw-head", interval.at(1) >= 1 - eps)
+  } else {
+    q.insert("a", _lerp-point(a, b, interval.at(0)))
+    q.insert("b", _lerp-point(a, b, interval.at(1)))
+  }
+  q
+}
+
+/// Splits line primitives into portions visible around opaque spheres/faces.
 ///
 /// This is deliberately separate from `sort-prims`: the public helper remains
 /// a sorting-only operation, while the render path can assign a correct depth
-/// key to every visible line fragment. Segment and edge styles are preserved.
-#let _clip-lines(prims, camera) = {
+/// key to every visible line fragment. Line styles are preserved; only the
+/// terminal surviving arrow fragment keeps its head.
+#let _clip-lines(prims, camera, theme: default-theme) = {
   let eps = 1e-12 // dimensionless parameter-space tolerance
-  let spheres = prims.filter(p => p.kind == "sphere")
+  let prims = _prepare-faces(prims, camera, theme: theme)
+  let spheres = prims.filter(p => p.kind == "sphere").map(p => _projected-sphere(p, camera))
+  let faces = prims.filter(p => p.kind == "face")
+    .map(p => _face-occluder(p, camera, theme)).filter(p => p != none)
   let out = ()
   for p in prims {
-    if p.kind == "seg" or p.kind == "edge" {
+    if p.kind in ("seg", "edge", "arrow") {
+      let (a, b) = _line-points(p)
+      let pa = project(camera, a)
+      let pb = project(camera, b)
       let hidden = ()
       let cuts = (0.0, 1.0)
       for sp in spheres {
-        let occ = _line-sphere-occlusion(p.a, p.b, sp, camera)
+        if not _line-bbox-overlaps-disk(pa, pb, sp) { continue }
+        let occ = _line-sphere-occlusion(pa, pb, sp)
         hidden += occ.hidden
         // Split even a fully visible line where it enters/leaves the projected
         // disk. That gives the overlapping foreground piece its own depth key
         // instead of letting a distant, non-overlapping tail drag its midpoint
         // behind the sphere.
         if occ.disk != none { cuts += (occ.disk.at(0), occ.disk.at(1)) }
+      }
+      for face in faces {
+        if not _line-bbox-overlaps-face(pa, pb, face) { continue }
+        let hit = _line-face-interaction(a, b, pa, pb, face)
+        cuts += hit.cuts
+        hidden += hit.hidden
       }
       let merged = _merge-intervals(hidden)
       for iv in merged {
@@ -207,17 +437,21 @@
         if unique.len() == 0 or t - unique.last() > eps { unique.push(t) }
       }
       let visible = ()
+      let hidden-index = 0
       for i in range(unique.len() - 1) {
         let iv = (unique.at(i), unique.at(i + 1))
         let mid = (iv.at(0) + iv.at(1)) / 2
-        let is-hidden = merged.any(h => mid > h.at(0) and mid < h.at(1))
+        while hidden-index < merged.len() and merged.at(hidden-index).at(1) <= mid {
+          hidden-index += 1
+        }
+        let is-hidden = if hidden-index < merged.len() {
+          let h = merged.at(hidden-index)
+          mid > h.at(0) and mid < h.at(1)
+        } else { false }
         if iv.at(1) - iv.at(0) > eps and not is-hidden { visible.push(iv) }
       }
       for iv in visible {
-        let q = p
-        q.insert("a", _lerp-point(p.a, p.b, iv.at(0)))
-        q.insert("b", _lerp-point(p.a, p.b, iv.at(1)))
-        out.push(q)
+        out.push(_line-fragment(p, a, b, iv, eps))
       }
     } else {
       out.push(p)
@@ -256,6 +490,21 @@
   (q.sx * unit, q.sy * unit)
 }
 
+#let _quiet-paint(paint) = if type(paint) == color {
+  paint.lighten(22%).transparentize(48%)
+} else { paint }
+
+#let _quiet-stroke(stroke) = {
+  if stroke == none { return none }
+  if type(stroke) == color { return _quiet-paint(stroke) }
+  if type(stroke) == dictionary {
+    let q = stroke
+    if "paint" in q { q.insert("paint", _quiet-paint(q.paint)) }
+    return q
+  }
+  stroke
+}
+
 /// Turns one depth-sorted primitive into a plain-data draw record (screen
 /// coordinates, resolved colours and thicknesses). No cetz here, so the drawing
 /// loop can run entirely on cetz names without shadowing our projection.
@@ -290,23 +539,29 @@
       a: _screen(camera, unit, p.from),
       b: _screen(camera, unit, p.to),
       stroke: (paint: st.color, thickness: st.w * unit * 1cm, cap: "round"),
-      mark: (end: st.head, fill: st.color, scale: st.head-scale * st.w * unit),
+      mark: if p.at("draw-head", default: true) {
+        (end: st.head, fill: st.color, scale: st.head-scale * st.w * unit)
+      } else { none },
     )
   } else if k == "face" {
     let b = if st.at("shade", default: true) { face-brightness(p.pts, theme.light) } else { 1.0 }
     let fill = st.color.darken((1.0 - b) * 100%)
     let op = st.at("fill-opacity", default: 0%)
     if op != 0% { fill = fill.transparentize(op) }
+    let stroke = st.at(
+      "stroke",
+      default: (paint: st.color.darken(st.stroke-darken), thickness: st.stroke-width),
+    )
+    if p.at("rear-face", default: false) and (op != 0% or "hidden-stroke" in st) {
+      stroke = st.at("hidden-stroke", default: _quiet-stroke(stroke))
+    }
     (
       kind: k,
       pts: p.pts.map(q => _screen(camera, unit, q)),
       fill: fill,
       // an explicit `stroke` hook (e.g. `none` from the solid generators)
       // overrides the theme-derived facet stroke
-      stroke: st.at(
-        "stroke",
-        default: (paint: st.color.darken(st.stroke-darken), thickness: st.stroke-width),
-      ),
+      stroke: stroke,
     )
   } else if k == "label" {
     (
@@ -360,6 +615,8 @@
 ///   `annotate.legend`).
 /// - colorbar (none, dictionary): `(colormap:, range:)` placed on the right,
 ///   spanning the scene height (see `annotate.colorbar`).
+/// - register-anchors (bool): Export logical object anchors to the surrounding
+///   CeTZ canvas. Disable when no later CeTZ command needs them.
 /// -> content
 #let scene-group(
   scene,
@@ -369,11 +626,12 @@
   axes: none,
   legend: none,
   colorbar: none,
+  register-anchors: true,
 ) = {
   let scene = resolve-scene(scene, camera)
   // All geometry resolved to plain data before the wildcard import, so the loop
   // below cannot be tripped by cetz re-exporting `project`/`scale`.
-  let records = sort-prims(_clip-lines(scene.prims, camera), camera)
+  let records = sort-prims(_clip-lines(scene.prims, camera, theme: theme), camera)
     .map(p => _record(camera, unit, theme, p))
   // Annotation placement, in canvas coords (screen projection times `unit`).
   let sb = _projected-screen-bbox(camera, scene.bbox)
@@ -382,12 +640,14 @@
   // Register one anchor-only CeTZ group per logical scenery object. Geometry is
   // still emitted anonymously below because depth clipping can split one object
   // into multiple draw records.
-  for (object-name, object-anchors) in scene.anchors {
-    group(name: object-name, {
-      for (anchor-name, point) in object-anchors {
-        anchor(anchor-name, _screen(camera, unit, point))
-      }
-    })
+  if register-anchors {
+    for (object-name, object-anchors) in scene.anchors {
+      group(name: object-name, {
+        for (anchor-name, point) in object-anchors {
+          anchor(anchor-name, _screen(camera, unit, point))
+        }
+      })
+    }
   }
   for r in records {
     if r.kind == "sphere" {
@@ -474,5 +734,6 @@
     axes: axes,
     legend: legend,
     colorbar: colorbar,
+    register-anchors: false,
   ))
 }

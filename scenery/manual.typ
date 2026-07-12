@@ -186,7 +186,9 @@ primitives plus a bounding box, with no CeTZ dependency whatsoever. At render
 time a `camera` projects every primitive orthographically, `sort-prims` keys each
 one by camera depth and orders them far-to-near, and the CeTZ backend draws them:
 spheres as radial-gradient shaded balls, faces flat-shaded from a single world
-light, labels always last so they stay on top.
+light, and labels always last so they stay on top. Before sorting, line-like
+primitives are split against opaque spheres and planar faces, while opaque meshes
+cull rear faces.
 
 Because the data model is pure, the same pipeline draws flat diagrams too:
 `camera-2d()` passes `(x, y)` straight through, so 2D figures and 3D scenes share
@@ -352,7 +354,7 @@ should use explicit anchors.
 
 = Transforms & groups
 
-A transform is an affine map `p #sym.arrow.bar matrix · p + offset`. `translate(v)`
+A transform maps a point through a matrix and then adds an offset. `translate(v)`
 and `scale(s)` are the two common shorthands; `affine(matrix:, offset:)` is the
 general form. `group(transform, ..prims)` applies one transform to a whole bag of
 primitives (and nested groups), returning a flat array that `build-scene` happily
@@ -390,10 +392,16 @@ render-scene(
 Beyond the bare primitives, scenery ships geometry generators. Four parametric
 _solids_ --- `uv-sphere`, `cylinder`, `cone`, `prism` --- each return a single
 `mesh` primitive (indexed vertices + faces) that the renderer flat-shades with
-hidden facet seams. Separately, `hull-faces(points)` computes the convex hull of a
+adaptive back-face culling. Translucent meshes retain both sides but quiet their
+rear strokes; `cull:` and `hidden-stroke:` override that policy. Separately,
+`hull-faces(points)` computes the convex hull of a
 point set as geometric face records `(plane, vertices)`; feed each record's
 `vertices` to `face(..)` to draw a polyhedron with visible edges. It returns
 `none` for degenerate (coplanar or collinear) input.
+
+Adaptive culling assumes a closed, approximately convex mesh with its centre
+inside, as produced by these generators. Use `cull: none` for open or strongly
+concave custom meshes.
 
 #example(
   "let col(i) = palette-color(default-theme, i)
@@ -650,6 +658,9 @@ anything. `unit:` sets canvas units per scene unit.
 `scene-group` registers one anchor-only CeTZ group per logical named object, so
 later CeTZ commands in the canvas can use `"a.east"` or `"bond.mid"`. The name
 remains singular even if occlusion splits the rendered bond into several pieces.
+For a large composed scene that needs no later references, pass
+`register-anchors: false`; standalone `render-scene` skips this unused export
+automatically.
 Because `scene-group` is just CeTZ commands, the reverse also holds: scenery's own
 `axes-triad`, `legend` and `colorbar` are callable directly inside any canvas when
 you want finer placement than the `render-scene` options give.
@@ -664,16 +675,18 @@ scenery is deliberately scoped. Know these four boundaries:
 
 / Painter's algorithm: Faces and other unsplit primitives use one depth key.
   _Intersecting_ translucent faces can therefore occasionally layer in the wrong
-  order. Segments and edges are fragmented against opaque sphere silhouettes,
-  but arbitrary polygon intersections are not split and there is no z-buffer.
+  order. Segments, edges and arrows are fragmented against opaque spheres and
+  planar faces, but faces are not BSP-split against each other and there is no
+  z-buffer.
 
 / Practical size cap: Everything runs in pure Typst, so compile time grows with
   primitive count. A few hundred to ~2,000 primitives is comfortable; tens of
   thousands are not. Prefer coarse `segments`/`rings` on solids, and reach for
   `edge`/`seg` wireframes over dense meshes where you can.
 
-/ No back-face culling: Every mesh face is drawn. Depth ordering, not culling,
-  produces the solid look.
+/ Adaptive mesh visibility: Opaque meshes cull rear faces by default;
+  translucent meshes keep both sides with quieter rear strokes. Use `cull: none`,
+  `cull: "back"`, `cull: "front"`, or `hidden-stroke:` to override the policy.
 
 *Roadmap.* A WASM geometry accelerator for larger and faster scenes, a perspective
 camera, and richer meshes are tracked in
@@ -700,8 +713,8 @@ name (@sec-prims explains why not `*`).
   [`seg(a, b, name:, ..style)`], [Thick round-capped segment; width `w` in scene units.],
   [`edge(a, b, name:, ..style)`], [Thin wireframe edge; absolute stroke `width`.],
   [`arrow(from, to, name:, ..style)`], [Arrow with a scaled head (`head`, `w`).],
-  [`face(pts, name:, ..style)`], [Filled planar polygon; `fill-opacity` for translucency.],
-  [`mesh(vertices, faces, name:, ..style)`], [Indexed polygon mesh; faces sort per-face.],
+  [`face(pts, name:, ..style)`], [Planar polygon; `fill-opacity` and optional `cull`.],
+  [`mesh(vertices, faces, name:, ..style)`], [Adaptive culling; `cull` and `hidden-stroke` hooks.],
   [`label(at, text, name:, ..style)`], [Text at a 3D point; `text-anchor` controls alignment.],
   [`build-scene(..prims)`], [Flattens primitives/groups and validates object names.],
 ))
@@ -714,7 +727,7 @@ name (@sec-prims explains why not `*`).
 ))
 
 #api("Transforms", (
-  [`affine(matrix:, offset:)`], [Affine transform `p #sym.arrow.bar matrix·p + offset`.],
+  [`affine(matrix:, offset:)`], [Affine map: matrix times point, plus offset.],
   [`translate(v)`], [Pure translation by `v`.],
   [`scale(s)`], [Uniform scale about the origin (positions only, not radii).],
   [`group(transform, ..prims)`], [Applies a transform to a bag of primitives/subgroups.],
@@ -735,9 +748,9 @@ name (@sec-prims explains why not `*`).
 ))
 
 #api("Rendering", (
-  [`render-scene(scene, camera, width:, theme:, axes:, legend:, colorbar:)`],
+  [`render-scene(scene, camera, ..)`],
   [Renders a scene to content at a target on-page width.],
-  [`scene-group(scene, camera, ..)`], [Raw CeTZ commands with logical named anchors.],
+  [`scene-group(scene, camera, ..)`], [Raw CeTZ commands; `register-anchors:` controls logical anchors.],
   [`sort-prims(prims, camera)`], [Pure depth-sort (far-to-near); meshes exploded to faces.],
 ))
 
@@ -758,11 +771,3 @@ name (@sec-prims explains why not `*`).
   [`vlen vnorm`], [Length and normalisation.],
   [`mvec(m, v)` · `lerp(a, b, t)`], [Matrix·vector, and vector interpolation.],
 ))
-
-#v(1.5em)
-#line(length: 100%, stroke: 0.5pt + luma(200))
-#align(center)[
-  #text(size: 9pt, fill: luma(100))[
-    scenery #version #sym.dot.c #link(pkg.repository)[#pkg.repository] #sym.dot.c MIT licensed
-  ]
-]

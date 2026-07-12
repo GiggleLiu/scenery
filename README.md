@@ -25,7 +25,7 @@ Scientific visualization for [Typst](https://typst.app) — a family of packages
 | --- | --- | --- |
 | [`scenery`](scenery/) | The shared scene core: typed 2D/3D primitives, orthographic camera, painter's depth sort, themes, annotations. Typst's first programmatic 3D API. | 0.1.0 |
 | [`wyckoff`](wyckoff/) | Materials Project style crystal-structure figures from space groups, layer groups, and Wyckoff positions. | 0.1.0 |
-| `brillouin` | Brillouin zones, high-symmetry k-paths, and band-path panels. | [in progress](https://github.com/GiggleLiu/scenery/milestone/2) |
+| [`brillouin`](brillouin/) | Brillouin zones, high-symmetry k-paths, and band-path panels. | 0.1.0 |
 
 More packages (tensor networks, lattice models, phase portraits, …) are tracked on the [roadmap](https://github.com/GiggleLiu/scenery/issues/17). Every package must fill a real gap on Typst Universe, serve a demonstrated need, and build on the shared core.
 
@@ -57,7 +57,7 @@ A crystal from its space group:
 #crystal(nacl, bonds: auto, legend: true, axes: true, width: 8cm)
 ```
 
-Each package README ([scenery](scenery/README.md), [wyckoff](wyckoff/README.md)) has the full API reference and gallery.
+Each package README ([scenery](scenery/README.md), [wyckoff](wyckoff/README.md), [brillouin](brillouin/README.md)) has the full API reference and gallery.
 
 ## Development
 

@@ -15,6 +15,9 @@ Programmatic 3D (and 2D) scenes for [Typst](https://typst.app) — the missing 3
 <td align="center"><a href="examples/flow.typ"><img src="images/flow.png" width="380"></a><br>2D-mode flow graph via <code>camera-2d()</code></td>
 <td align="center"><a href="examples/hero.typ"><img src="images/hero.png" width="380"></a><br>Composite hero scene — axes triad, legend, colorbar</td>
 </tr>
+<tr>
+<td align="center" colspan="2"><a href="examples/visibility.typ"><img src="images/visibility.png" width="520"></a><br>Visibility regression — an arrow correctly clipped by an opaque plane and sphere</td>
+</tr>
 </table>
 
 The sources for these figures are in [`examples/`](examples/).
@@ -62,7 +65,7 @@ Shape-generator inputs and affine transform parameters remain concrete vectors; 
 | `mesh` | bounding-box `center` | `center`, `vertex-0`, `vertex-1`, … |
 | `label` | `center` | attachment-point `center` |
 
-Inside a shared `cetz.canvas`, `scene-group` registers these logical anchors with CeTZ, so later draw commands can directly use `"a.east"` or `"bond.mid"`. Names stay stable even when the renderer splits a line for occlusion.
+Inside a shared `cetz.canvas`, `scene-group` registers these logical anchors with CeTZ, so later draw commands can directly use `"a.east"` or `"bond.mid"`. Names stay stable even when the renderer splits a line for occlusion. Set `register-anchors: false` when a large composed scene does not need later CeTZ references; standalone `render-scene` does this automatically.
 
 ### Imports
 
@@ -70,7 +73,7 @@ Inside a shared `cetz.canvas`, `scene-group` registers these logical anchors wit
 
 ## How it works
 
-A scene is a flat array of typed primitives — plain dictionaries tagged by `kind`, e.g. `(kind: "sphere", center: (0,0,0), r: 0.6)`. Nothing in the data model touches CeTZ. At render time named coordinates are resolved for the selected camera, then each primitive is projected orthographically. Segments and edges are split at opaque sphere silhouettes and their hidden intervals are removed; the remaining primitives are keyed by camera depth (spheres by centre, line fragments by midpoint, faces by centroid; meshes explode into per-face polygons that sort independently), sorted far-to-near, and drawn. Spheres use radial-gradient shading, faces are flat-shaded from one world light, and labels stay on top. Styling is a pure three-layer merge — theme defaults, per-kind block, then each primitive's own hooks — so colours and widths are just named arguments on the constructors.
+A scene is a flat array of typed primitives — plain dictionaries tagged by `kind`, e.g. `(kind: "sphere", center: (0,0,0), r: 0.6)`. Nothing in the data model touches CeTZ. At render time named coordinates are resolved for the selected camera, then each primitive is projected orthographically. Segments, edges, and arrows are split at opaque sphere silhouettes and planar face boundaries; intervals genuinely hidden by an opaque object are removed. Opaque meshes cull rear faces by default, while translucent meshes retain both sides with quieter rear strokes. The remaining primitives are keyed by camera depth (spheres by centre, line fragments by midpoint, faces by centroid), sorted far-to-near, and drawn. Spheres use radial-gradient shading, faces are flat-shaded from one world light, and labels stay on top. Styling is a pure three-layer merge — theme defaults, per-kind block, then each primitive's own hooks — so colours and widths are just named arguments on the constructors.
 
 ## API reference
 
@@ -84,8 +87,8 @@ Grouped by source module; every name below is exported from the package root.
 | `seg(a, b, name:, ..style)` | Thick round-capped segment (e.g. a bond); width `w` in scene units. |
 | `edge(a, b, name:, ..style)` | Thin wireframe edge (absolute stroke width). |
 | `arrow(from, to, name:, ..style)` | Arrow with a scaled head (`head`, `w`). |
-| `face(pts, name:, ..style)` | Filled planar polygon; `fill-opacity` for translucency. |
-| `mesh(vertices, faces, name:, ..style)` | Indexed polygon mesh; each face sorts on its own. |
+| `face(pts, name:, ..style)` | Filled planar polygon; `fill-opacity` and optional `cull` visibility policy. |
+| `mesh(vertices, faces, name:, ..style)` | Indexed polygon mesh; adaptive back-face culling, `cull`, and `hidden-stroke`. |
 | `label(at, text, name:, ..style)` | Text at a 3D point; `text-anchor` controls alignment. |
 | `build-scene(..prims)` | Flattens primitives/groups and validates object names. |
 
@@ -130,7 +133,7 @@ Grouped by source module; every name below is exported from the package root.
 | Name | Description |
 | --- | --- |
 | `render-scene(scene, camera, width:, theme:, axes:, legend:, colorbar:)` | Renders a scene to Typst content at a target on-page width. |
-| `scene-group(scene, camera, ..)` | Raw CeTZ commands; registers logical names for later `"object.anchor"` use. |
+| `scene-group(scene, camera, register-anchors:, ..)` | Raw CeTZ commands; optionally registers logical names for later `"object.anchor"` use. |
 | `sort-prims(prims, camera)` | Pure depth-sort (far-to-near) with meshes exploded to faces. |
 
 ### Styling — `default-theme`, `resolve-style`, `palette-color`
@@ -151,6 +154,8 @@ Grouped by source module; every name below is exported from the package root.
 
 `render-scene`'s `axes:` / `legend:` / `colorbar:` options place these three automatically (triad bottom-left, legend and colorbar on the right), so the [hero example](examples/hero.typ) wires all three with a few named arguments.
 
+Adaptive culling assumes a closed, approximately convex mesh with its centre inside—the scientific solids generated here satisfy that convention. For an open or strongly concave custom mesh, use `cull: none` or provide an explicit face policy.
+
 ### Linear algebra — `vadd`, `vsub`, `vscale`, `vdot`, `vcross`, `vlen`, `vnorm`, `mvec`, `lerp`
 
 Small pure vector/matrix helpers (`mvec` is matrix·vector, `lerp` interpolates) shared by the geometry code and available for building your own primitives.
@@ -158,9 +163,9 @@ Small pure vector/matrix helpers (`mvec` is matrix·vector, `lerp` interpolates)
 ## Limitations
 
 - **Orthographic only.** There is no perspective camera; parallel lines stay parallel and there is no foreshortening. This is the right projection for diagrams and technical figures, and the deliberate scope for now.
-- **Painter's algorithm.** Faces and other unsplit primitives use one depth key, so intersecting translucent faces can occasionally be layered in the wrong order. Segments and edges are fragmented against opaque sphere silhouettes, but arbitrary polygon intersections are not split.
+- **Painter's algorithm.** Faces use one depth key, so intersecting translucent faces can occasionally be layered in the wrong order. Line-like primitives are fragmented against opaque spheres and planar faces, but faces are not BSP-split against each other.
 - **Practical size cap.** Everything runs in pure Typst, so compile time grows with primitive count. A few hundred to ~2,000 primitives is comfortable; tens of thousands are not.
-- **Limited hidden-surface removal.** Opaque spheres clip hidden segment and edge intervals. Faces have no back-face culling or z-buffer; their occlusion still relies on painter ordering.
+- **Limited hidden-surface removal.** Opaque spheres and planar faces clip hidden line intervals, and opaque meshes cull rear faces. There is still no z-buffer; non-planar and cyclic intersections rely on painter ordering.
 
 ## Roadmap
 
