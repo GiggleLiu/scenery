@@ -4,7 +4,7 @@
 # own Makefile exposing `test` and `examples` targets. This root Makefile fans
 # those out across every package and wires up local `@preview` resolution.
 
-.PHONY: all test examples manual pkgroot clean
+.PHONY: all test examples manual pkgroot plugin clean
 
 # Packages in dependency order (core first, then its consumers).
 PACKAGES := scenery wyckoff brillouin
@@ -27,6 +27,12 @@ pkgroot:
 
 check-links:
 	python3 tools/check_links.py
+
+# Build native/WASM plugins. Only wyckoff ships one today; the fan-out builds
+# each package's `plugin` target where it exists.
+plugin:
+	@$(MAKE) -C wyckoff plugin
+	@echo "Plugin(s) built."
 
 test: pkgroot check-links
 	@for pkg in $(PACKAGES); do \

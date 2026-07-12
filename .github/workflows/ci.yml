@@ -21,6 +21,12 @@ jobs:
       - name: Check markdown links
         if: matrix.package == 'scenery'
         run: make check-links
+      - name: Install Rust wasm target
+        if: matrix.package == 'wyckoff'
+        run: rustup target add wasm32-unknown-unknown
+      - name: Build wyckoff-io plugin
+        if: matrix.package == 'wyckoff'
+        run: make -C wyckoff plugin
       - name: Run tests
         run: make -C ${{ matrix.package }} test
       - name: Compile examples
