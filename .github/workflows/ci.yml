@@ -24,16 +24,16 @@ jobs:
       - name: Install Rust wasm target
         if: matrix.package == 'wyckoff'
         run: rustup target add wasm32-unknown-unknown
+      # Rebuild the plugin fresh (rust-toolchain.toml pins rustc) and run the
+      # typst suite against THIS build, so stale or broken Rust source is caught
+      # functionally by the import tests that exercise parse_xyz/poscar/cif.
+      # NB: a byte-for-byte `git diff` gate against the committed blob is not used
+      # here — wasm output is not reproducible across host OS (the blob is
+      # committed from macOS; CI runs on ubuntu). A true byte-repro gate needs a
+      # pinned build container; tracked as a follow-up.
       - name: Build wyckoff-io plugin
         if: matrix.package == 'wyckoff'
         run: make -C wyckoff plugin
-      # Reproducible-build gate: rust-toolchain.toml pins the exact rustc, so a
-      # fresh `make -C wyckoff plugin` must byte-match the committed blob. A diff
-      # here means the checked-in wyckoff_io.wasm drifted from its pinned source
-      # (rebuild + recommit to fix).
-      - name: Verify wasm blob is reproducible
-        if: matrix.package == 'wyckoff'
-        run: git diff --exit-code wyckoff/plugin/wyckoff_io.wasm
       - name: Run wyckoff-io parser tests
         if: matrix.package == 'wyckoff'
         run: cargo test --manifest-path wyckoff-io/Cargo.toml
