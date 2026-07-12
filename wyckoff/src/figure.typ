@@ -85,11 +85,13 @@
     }
   }
 
-  for (ea, eb) in cell-edges(structure, supercell: supercell) {
-    for t in range(8) {
-      let p = scenery.lerp(ea, eb, t / 8)
-      let q = scenery.lerp(ea, eb, (t + 1) / 8)
-      prims.push(scenery.edge(p, q, color: luma(120), width: 0.7pt))
+  if structure.at("kind", default: "") != "molecule" {
+    for (ea, eb) in cell-edges(structure, supercell: supercell) {
+      for t in range(8) {
+        let p = scenery.lerp(ea, eb, t / 8)
+        let q = scenery.lerp(ea, eb, (t + 1) / 8)
+        prims.push(scenery.edge(p, q, color: luma(120), width: 0.7pt))
+      }
     }
   }
 

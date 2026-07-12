@@ -33,8 +33,20 @@
 /// explicit lattice: array (with atoms:) must be supplied.
 #let structure(spacegroup: none, layergroup: none, lattice: (:), sites: (), atoms: ()) = {
   let explicit = type(lattice) == array
-  let n-modes = (int(spacegroup != none) + int(layergroup != none) + int(explicit))
-  assert(n-modes == 1, message: "wyckoff: give exactly one of spacegroup:, layergroup:, or an explicit lattice: array with atoms:")
+  let molecule = (not explicit) and spacegroup == none and layergroup == none and atoms.len() > 0
+  let n-modes = (int(spacegroup != none) + int(layergroup != none) + int(explicit) + int(molecule))
+  assert(n-modes == 1, message: "wyckoff: give exactly one of spacegroup:, layergroup:, an explicit lattice: array with atoms:, or atoms: alone (molecule mode)")
+
+  if molecule {
+    let ident = ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0))
+    let alist = atoms.enumerate().map(((i, (el, cart))) => {
+      let _ = element-info(el)  // validates the symbol
+      assert(cart.len() == 3, message: "wyckoff: molecule atom " + str(i) + " needs a Cartesian (x, y, z)")
+      let c = cart.map(float)
+      (element: el, frac: c, cart: c, site: i)
+    })
+    return (kind: "molecule", group: none, vectors: ident, periodic: (false, false, false), atoms: alist)
+  }
 
   if explicit {
     assert(lattice.len() == 3 and atoms.len() > 0,
