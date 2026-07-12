@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-12
 **Theme:** Point wyckoff at a real structure file and get a good-looking figure out.
-**Tracking:** advances issue [#17](https://github.com/GiggleLiu/scenery/issues/17) (CIF import, perspective camera, BSP, WASM accelerator) and closes the `.xyz` half of the import request in [#17's comment thread](https://github.com/GiggleLiu/scenery/issues/17). The `.pdb` request and the molecular-orbital formats (`.molden`, `.cube`, …) stay parked in #17; the normalized record below is designed so they slot in later without a schema change.
+**Tracking:** advances issue [#17](https://github.com/GiggleLiu/scenery/issues/17) (CIF import, perspective camera, BSP, WASM accelerator) and closes the `.xyz` half of the import request in [#17's comment thread](https://github.com/GiggleLiu/scenery/issues/17). The molecular-orbital formats (`.molden`, `.cube`, …) stay parked in #17; the normalized record below is designed so they slot in later without a schema change.
 
 This milestone deliberately does **not** add new feature-category packages (`tensornet`, `lattice`, `phase-portrait`, …). All work lands in the existing `scenery` core and `wyckoff` package.
 
