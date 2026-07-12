@@ -27,6 +27,16 @@ jobs:
       - name: Build wyckoff-io plugin
         if: matrix.package == 'wyckoff'
         run: make -C wyckoff plugin
+      # Reproducible-build gate: rust-toolchain.toml pins the exact rustc, so a
+      # fresh `make -C wyckoff plugin` must byte-match the committed blob. A diff
+      # here means the checked-in wyckoff_io.wasm drifted from its pinned source
+      # (rebuild + recommit to fix).
+      - name: Verify wasm blob is reproducible
+        if: matrix.package == 'wyckoff'
+        run: git diff --exit-code wyckoff/plugin/wyckoff_io.wasm
+      - name: Run wyckoff-io parser tests
+        if: matrix.package == 'wyckoff'
+        run: cargo test --manifest-path wyckoff-io/Cargo.toml
       - name: Run tests
         run: make -C ${{ matrix.package }} test
       - name: Compile examples
