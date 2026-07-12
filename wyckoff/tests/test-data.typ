@@ -7,6 +7,15 @@
 #assert(o.r-cov < 0.8, message: "O covalent radius ~0.66")
 #assert(element-info("Ti").r-atom > 1.0)
 
+// van der Waals radii (issue #27): pymatgen table, Å.
+#assert(calc.abs(o.r-vdw - 1.52) < 0.01, message: "O vdW radius ~1.52")
+#assert(calc.abs(element-info("C").r-vdw - 1.70) < 0.01, message: "C vdW radius ~1.70")
+#assert(calc.abs(element-info("H").r-vdw - 1.10) < 0.05, message: "H vdW radius ~1.10")
+#assert(na.r-vdw > 2.2 and na.r-vdw < 2.35, message: "Na vdW radius ~2.27")
+#assert(o.r-vdw > o.r-atom and na.r-vdw > na.r-atom,
+  message: "vdW radius must exceed the atomic radius")
+#assert(type(o.r-vdw) == float, message: "r-vdw must be a float")
+
 #import "/src/data.typ": group-data
 
 #let sg225 = group-data("3d", 225)

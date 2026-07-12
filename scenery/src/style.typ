@@ -35,6 +35,7 @@
     color: luma(185),
     stroke-darken: 45%,
     stroke-width: 0.5pt,
+    specular: true, // specular highlight stop in the ball gradient (issue #30)
   ),
   seg: (
     color: luma(90),

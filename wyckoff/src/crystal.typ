@@ -6,18 +6,20 @@
   structure,
   view: _default-view,
   supercell: (1, 1, 1),
+  mode: "ball-and-stick",
   bonds: auto,
+  bond-color: auto,
   polyhedra: (),
   labels: false,
   legend: true,
   axes: true,
-  radius: 0.45,
+  radius: auto,
   colors: (:),
   width: 8cm,
 ) = {
   let scene = build-scene(structure, view: view, supercell: supercell,
-    bonds: bonds, polyhedra: polyhedra, labels: labels, radius: radius,
-    colors: colors)
+    mode: mode, bonds: bonds, bond-color: bond-color, polyhedra: polyhedra,
+    labels: labels, radius: radius, colors: colors)
   render(scene, width: width, legend: legend,
     axes-info: if axes {
       (vectors: structure.vectors, view: view,
@@ -29,15 +31,38 @@
   structure,
   view: _default-view,
   supercell: (1, 1, 1),
+  mode: "ball-and-stick",
   bonds: auto,
+  bond-color: auto,
   polyhedra: (),
   labels: false,
-  radius: 0.45,
+  radius: auto,
   colors: (:),
   scale: 1.0,
 ) = {
   let scene = build-scene(structure, view: view, supercell: supercell,
-    bonds: bonds, polyhedra: polyhedra, labels: labels, radius: radius,
-    colors: colors)
+    mode: mode, bonds: bonds, bond-color: bond-color, polyhedra: polyhedra,
+    labels: labels, radius: radius, colors: colors)
   draw-scene(scene, scale: scale)
+}
+
+/// Render a non-periodic molecule: atoms + bonds, no unit cell, no
+/// crystallographic triad. Same scene options as crystal().
+/// mode: "ball-and-stick" (default) | "space-filling"/"cpk" | "licorice".
+#let molecule(
+  structure,
+  view: _default-view,
+  bonds: auto,
+  bond-color: auto,
+  labels: false,
+  legend: true,
+  radius: auto,
+  colors: (:),
+  mode: "ball-and-stick",
+  width: 8cm,
+) = {
+  let scene = build-scene(structure, view: view, supercell: (1, 1, 1),
+    mode: mode, bonds: bonds, bond-color: bond-color, polyhedra: (),
+    labels: labels, radius: radius, colors: colors)
+  render(scene, width: width, legend: legend, axes-info: none)
 }

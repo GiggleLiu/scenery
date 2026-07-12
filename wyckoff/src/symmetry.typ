@@ -43,3 +43,29 @@
   }
   atoms
 }
+
+/// Expand explicit asymmetric-unit atoms through a group's operations,
+/// treating each as a general position: q = op.0 · frac + op.1 per op,
+/// wrapped on periodic dims and deduplicated per-atom-orbit. Used by the CIF
+/// spacegroup-identifier import path, where atoms arrive as raw fractional
+/// coordinates rather than Wyckoff letters. Unlike expand(), there is no
+/// multiplicity assertion: an atom on a special position yields a smaller
+/// orbit, which is correct here.
+/// asym: ((element, (fx, fy, fz)), ..). Returns ((element, frac, site), ..).
+#let expand-general(group, asym, periodic, eps: 1e-4) = {
+  let atoms = ()
+  for (si, (el, p)) in asym.enumerate() {
+    let orbit = ()
+    for op in group.ops {
+      let q = vadd(mvec(op.at(0), p), op.at(1))
+      let q = range(3).map(i => if periodic.at(i) { _wrap(q.at(i)) } else { q.at(i) })
+      if not orbit.any(o => _close(o, q, periodic, eps)) {
+        orbit.push(q)
+      }
+    }
+    for q in orbit {
+      atoms.push((element: el, frac: q, site: si))
+    }
+  }
+  atoms
+}

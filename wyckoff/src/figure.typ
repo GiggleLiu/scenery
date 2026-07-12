@@ -24,28 +24,56 @@
   structure,
   view: (azimuth: 25deg, elevation: 15deg),
   supercell: (1, 1, 1),
+  mode: "ball-and-stick",  // | "space-filling"/"cpk" | "licorice"
   bonds: auto,          // auto | none | rules array
+  bond-color: auto,     // auto = two-tone split halves | a color = one seg per bond
   polyhedra: (),        // element list
-  radius: 0.45,
-  bond-width: 0.16,
+  radius: auto,         // per-mode default: 0.45 (b&s), 1.0 (cpk), 0.55 (licorice)
+  bond-width: auto,     // per-mode default: 0.25 (licorice), 0.16 otherwise
   labels: false,
   colors: (:),
 ) = {
+  assert(mode in ("ball-and-stick", "space-filling", "cpk", "licorice"),
+    message: "wyckoff: mode must be \"ball-and-stick\", \"space-filling\" (alias \"cpk\") or \"licorice\", got " + repr(mode))
+  let mode = if mode == "cpk" { "space-filling" } else { mode }
+  assert(mode != "space-filling" or polyhedra.len() == 0,
+    message: "wyckoff: space-filling mode draws no polyhedra; drop the polyhedra: option")
+  assert(bond-color == auto or type(bond-color) == color,
+    message: "wyckoff: bond-color must be auto or a color, got " + repr(bond-color))
+  let bond-width = if bond-width == auto {
+    if mode == "licorice" { 0.25 } else { 0.16 }
+  } else { bond-width }
+  let radius = if radius == auto {
+    if mode == "space-filling" { 1.0 } else if mode == "licorice" { 0.55 } else { 0.45 }
+  } else { radius }
+
   let az = view.at("azimuth", default: 25deg)
   let elev = view.at("elevation", default: 15deg)
-  let cam = scenery.camera(azimuth: az, elevation: elev)
+  let cam = scenery.camera(
+    azimuth: az, elevation: elev,
+    mode: view.at("mode", default: "orthographic"),
+    distance: view.at("distance", default: 25.0),
+  )
 
   // Depth-only offset: the old renderer pushed polyhedra faces back by 0.01 in
   // depth (`cdepth - 0.01`). The camera-forward direction changes ONLY depth
   // (screen x/y are invariant), so offsetting face vertices along it by -0.01
   // reproduces the old depth key exactly while leaving projected geometry — and
   // hence the screen bbox and every drawn pixel — untouched.
+  // (Exact for orthographic; under perspective the 0.01 depth push shifts
+  // screen x/y by ~0.01/distance — visually negligible.)
   let gdepth = (-calc.sin(az) * calc.cos(elev), calc.cos(az) * calc.cos(elev), calc.sin(elev))
   let face-offset = scenery.vscale(gdepth, -0.01)
 
   let shown = display-atoms(structure, supercell: supercell)
   let prims = ()
-  let rdisp(el) = radius * element-info(el).r-atom
+  // Displayed sphere radius per mode. Ball-and-stick is today's exact formula;
+  // space-filling uses the full van der Waals radius (CPK); licorice caps are
+  // element-independent, slightly wider (0.55) than the stick's half-width
+  // (0.50 x bond-width) so the round cap joint is seamlessly covered.
+  let rdisp(el) = if mode == "space-filling" { radius * element-info(el).r-vdw }
+    else if mode == "licorice" { radius * bond-width }
+    else { radius * element-info(el).r-atom }
   let color-of(el) = colors.at(el, default: element-info(el).color)
 
   // Spheres, then labels, then bond segs, then polyhedra faces, then cell edges:
@@ -60,17 +88,27 @@
     }
   }
 
-  let blist = if bonds == none { () } else { find-bonds(shown, bonds) }
+  // Space-filling shows the raw packing: skip the bond search entirely.
+  let blist = if mode == "space-filling" or bonds == none { () } else { find-bonds(shown, bonds) }
   for b in blist {
     let (pa, pb) = (shown.at(b.i), shown.at(b.j))
     let dir = scenery.vnorm(scenery.vsub(pb.cart, pa.cart))
-    let a0 = scenery.vadd(pa.cart, scenery.vscale(dir, 0.9 * rdisp(pa.element)))
-    let b0 = scenery.vsub(pb.cart, scenery.vscale(dir, 0.9 * rdisp(pb.element)))
-    let mid = scenery.lerp(a0, b0, 0.5)
-    // Two-tone bond: one seg per half, coloured by its own atom.
-    for (p, q, el) in ((a0, mid, pa.element), (mid, b0, pb.element)) {
-      prims.push(scenery.seg(p, q,
-        color: color-of(el).darken(10%), w: bond-width))
+    // Ball-and-stick trims each bond end to 90% of the sphere radius (today's
+    // rule); licorice sticks run atom-center to atom-center — their caps have
+    // the same radius as the stick, so the joint is hidden by the cap sphere.
+    let trim(el) = if mode == "licorice" { 0.0 } else { 0.9 * rdisp(el) }
+    let a0 = scenery.vadd(pa.cart, scenery.vscale(dir, trim(pa.element)))
+    let b0 = scenery.vsub(pb.cart, scenery.vscale(dir, trim(pb.element)))
+    if bond-color == auto {
+      let mid = scenery.lerp(a0, b0, 0.5)
+      // Two-tone bond: one seg per half, coloured by its own atom.
+      for (p, q, el) in ((a0, mid, pa.element), (mid, b0, pb.element)) {
+        prims.push(scenery.seg(p, q,
+          color: color-of(el).darken(10%), w: bond-width))
+      }
+    } else {
+      // Single-color opt-out: one seg per bond, verbatim color.
+      prims.push(scenery.seg(a0, b0, color: bond-color, w: bond-width))
     }
   }
 
@@ -85,11 +123,13 @@
     }
   }
 
-  for (ea, eb) in cell-edges(structure, supercell: supercell) {
-    for t in range(8) {
-      let p = scenery.lerp(ea, eb, t / 8)
-      let q = scenery.lerp(ea, eb, (t + 1) / 8)
-      prims.push(scenery.edge(p, q, color: luma(120), width: 0.7pt))
+  if structure.at("kind", default: "") != "molecule" {
+    for (ea, eb) in cell-edges(structure, supercell: supercell) {
+      for t in range(8) {
+        let p = scenery.lerp(ea, eb, t / 8)
+        let q = scenery.lerp(ea, eb, (t + 1) / 8)
+        prims.push(scenery.edge(p, q, color: luma(120), width: 0.7pt))
+      }
     }
   }
 
@@ -100,8 +140,11 @@
   for p in prims {
     if p.kind == "sphere" {
       let s = scenery.project(cam, p.center)
-      xs += (s.sx - p.r, s.sx + p.r)
-      ys += (s.sy - p.r, s.sy + p.r)
+      // Screen radius: world radius times the camera's depth magnification
+      // (exactly 1.0 for orthographic — wyckoff pixel parity).
+      let rs = p.r * scenery.project-scale(cam, s.depth)
+      xs += (s.sx - rs, s.sx + rs)
+      ys += (s.sy - rs, s.sy + rs)
     } else if p.kind == "face" {
       for q in p.pts {
         let s = scenery.project(cam, q)
@@ -168,12 +211,16 @@
 /// with the SAME slacks (`2*r`, `0.45*w`). All spheres and all (unfiltered) segs
 /// participate in the coverage test, exactly as the old draw loop did.
 #let occlude(prims, cam) = {
-  let spheres = prims.filter(p => p.kind == "sphere").map(p => (
-    c: _proj2(cam, p.center), r: p.r, depth: _pdepth(cam, p.center),
-  ))
-  let segs = prims.filter(p => p.kind == "seg").map(p => (
-    a: _proj2(cam, p.a), b: _proj2(cam, p.b), w: p.w, depth: _pdepth(cam, _mid(p.a, p.b)),
-  ))
+  let spheres = prims.filter(p => p.kind == "sphere").map(p => {
+    let q = scenery.project(cam, p.center)
+    // Disk radius in screen units (depth-scaled; x1.0 under orthographic).
+    (c: (q.sx, q.sy), r: p.r * scenery.project-scale(cam, q.depth), depth: q.depth)
+  })
+  let segs = prims.filter(p => p.kind == "seg").map(p => {
+    let d = _pdepth(cam, _mid(p.a, p.b))
+    (a: _proj2(cam, p.a), b: _proj2(cam, p.b),
+     w: p.w * scenery.project-scale(cam, d), depth: d)
+  })
   // A bond stub is hidden when it projects fully inside a sphere's disk and is
   // not clearly in front of that sphere (2r slack).
   let seg-hidden(sa, sb, sd) = spheres.any(sp =>

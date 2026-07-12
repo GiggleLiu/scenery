@@ -1,4 +1,4 @@
-.PHONY: all test examples data fixtures images clean venv
+.PHONY: all test examples data fixtures images clean venv plugin
 
 TYPST = typst compile --root .
 TESTS := $(wildcard tests/test-*.typ)
@@ -26,6 +26,18 @@ examples:
 venv:
 	python3 -m venv $(TOOLS)/.venv
 	$(TOOLS)/.venv/bin/pip install -r $(TOOLS)/requirements.txt
+
+PLUGIN_CRATE = ../wyckoff-io
+WASM_OUT = plugin/wyckoff_io.wasm
+
+plugin:
+	cargo build --manifest-path $(PLUGIN_CRATE)/Cargo.toml --release --target wasm32-unknown-unknown
+	@mkdir -p plugin
+	cp $(PLUGIN_CRATE)/target/wasm32-unknown-unknown/release/wyckoff_io.wasm $(WASM_OUT)
+	@if command -v wasm-opt >/dev/null 2>&1; then \
+	  echo "wasm-opt -Oz"; wasm-opt -Oz $(WASM_OUT) -o $(WASM_OUT); \
+	else echo "wasm-opt not found, skipping (optional)"; fi
+	@ls -l $(WASM_OUT)
 
 data:
 	$(VENV) $(TOOLS)/gen_elements.py
