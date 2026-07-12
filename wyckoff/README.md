@@ -187,7 +187,6 @@ Structures are generated in the **standard ITA settings with conventional cells*
 
 ## Roadmap
 
-- CIF import
 - Brillouin zone drawings
 - A WASM geometry engine as an optional accelerator for large scenes
 
