@@ -7,16 +7,22 @@
 /// A reference to an anchor on a named scene object.
 ///
 /// String references such as `"atom.east"` are the compact form. Use this
-/// constructor when the anchor is not a string, notably a sphere border angle.
+/// constructor when the anchor is not a string, notably a sphere screen-plane
+/// angle or a world-space 3D direction vector.
 ///
 /// - name (str): Named object.
-/// - anchor (str, angle): Anchor name or camera-relative border angle.
+/// - anchor (str, angle, array): Anchor name, camera-relative border angle, or
+///   numeric 3D surface direction.
 /// -> dictionary
 #let anchor-ref(name, anchor: "default") = {
   assert(type(name) == str, message: "anchor reference name must be a string, got " + repr(name))
   assert(name != "", message: "anchor reference name must not be empty")
   assert(not name.contains("."), message: "anchor reference name " + repr(name) + " must not contain `.`")
-  assert(type(anchor) in (str, angle), message: "anchor must be a string or angle, got " + repr(anchor))
+  let vector-anchor = type(anchor) == array and anchor.len() == 3 and anchor.all(
+    x => type(x) in (int, float)
+  )
+  assert(type(anchor) in (str, angle) or vector-anchor,
+    message: "anchor must be a string, angle, or numeric 3-vector, got " + repr(anchor))
   assert(type(anchor) != str or anchor != "", message: "anchor name must not be empty")
   (kind: "anchor-ref", name: name, anchor: anchor)
 }
@@ -83,4 +89,10 @@
   if coordinate-is-concrete(c) { () }
   else if _is-transformed(c) { coordinate-dependencies(c.base) }
   else { (c.name,) }
+}
+
+/// Name of an untransformed default-anchor reference, or `none`.
+#let direct-default-reference(c) = {
+  c = normalize-coordinate(c)
+  if _is-ref(c) and c.anchor == "default" { c.name } else { none }
 }

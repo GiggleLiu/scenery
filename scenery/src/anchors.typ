@@ -1,7 +1,7 @@
 // Named-object registry and camera-aware anchor resolution.
 
-#import "coordinate.typ": normalize-coordinate, apply-deferred, coordinate-dependencies
-#import "linalg.typ": vadd, vscale
+#import "coordinate.typ": normalize-coordinate, apply-deferred, coordinate-dependencies, direct-default-reference
+#import "linalg.typ": vadd, vsub, vscale, vlen, vnorm
 #import "scene.typ": _bbox, _object-registry
 
 #let _mid(a, b) = vscale(vadd(a, b), 0.5)
@@ -36,6 +36,17 @@
   }
 }
 
+#let _sphere-world-direction(anchor) = {
+  if type(anchor) == array { anchor }
+  else if type(anchor) == str {
+    (
+      "x+": (1, 0, 0), "x-": (-1, 0, 0),
+      "y+": (0, 1, 0), "y-": (0, -1, 0),
+      "z+": (0, 0, 1), "z-": (0, 0, -1),
+    ).at(anchor, default: none)
+  } else { none }
+}
+
 #let _vertex-index(anchor) = {
   if type(anchor) != str or anchor.match(regex("^vertex-[0-9]+$")) == none { none }
   else { int(anchor.slice(7)) }
@@ -45,7 +56,8 @@
   let k = p.kind
   if k == "sphere" {
     ("default", "center", "east", "north-east", "north", "north-west",
-     "west", "south-west", "south", "south-east")
+     "west", "south-west", "south", "south-east",
+     "x+", "x-", "y+", "y-", "z+", "z-")
   } else if k in ("seg", "edge", "arrow") {
     ("default", "start", "mid", "end")
   } else if k == "face" {
@@ -76,13 +88,21 @@
   let out = if k == "sphere" {
     if anchor == "center" { p.center }
     else {
-      let angle = _sphere-angle(anchor)
-      if angle == none { none } else {
+      let world-dir = _sphere-world-direction(anchor)
+      if world-dir != none {
+        if vlen(world-dir) == 0 {
+          panic("sphere " + repr(object-name) + ": 3D anchor direction must not be zero")
+        }
+        vadd(p.center, vscale(vnorm(world-dir), p.r))
+      } else {
+        let angle = _sphere-angle(anchor)
+        if angle == none { none } else {
         let (right, up) = _camera-basis(camera)
         vadd(p.center, vadd(
           vscale(right, p.r * calc.cos(angle)),
           vscale(up, p.r * calc.sin(angle)),
         ))
+        }
       }
     }
   } else if k == "seg" or k == "edge" {
@@ -153,7 +173,33 @@
       object-name: target-name, owner: owner,
     )
   })
-  _map-prim-coordinates(p, at)
+  let attach(c, point, other) = {
+    let name = direct-default-reference(c)
+    if name == none or objects.at(name).kind != "sphere" { return point }
+    let direction = vsub(other, point)
+    if vlen(direction) == 0 {
+      panic(owner + ": cannot auto-attach sphere " + repr(name) + " toward coincident point")
+    }
+    vadd(point, vscale(vnorm(direction), objects.at(name).r))
+  }
+
+  if p.kind == "seg" or p.kind == "edge" {
+    let a = at(p.a)
+    let b = at(p.b)
+    let q = p
+    q.insert("a", attach(p.a, a, b))
+    q.insert("b", attach(p.b, b, a))
+    q
+  } else if p.kind == "arrow" {
+    let from = at(p.from)
+    let to = at(p.to)
+    let q = p
+    q.insert("from", attach(p.from, from, to))
+    q.insert("to", attach(p.to, to, from))
+    q
+  } else {
+    _map-prim-coordinates(p, at)
+  }
 }
 
 #let _resolve-prims(scene, camera) = {

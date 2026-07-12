@@ -318,7 +318,7 @@ and affine transform parameters themselves remain concrete vectors.
 #example(
   "let scene = build-scene(
   // The bond deliberately comes first: forward references are valid.
-  seg(\"a.east\", \"b.west\", name: \"bond\", color: luma(85)),
+  seg(\"a\", \"b\", name: \"bond\", color: luma(85)),
   label(\"bond.mid\", box(fill: white, inset: 1pt, radius: 1pt)[d], text-anchor: \"south\"),
   sphere((0, 0, 0), 0.6, name: \"a\", color: rgb(\"#4477aa\")),
   sphere((2, 0, 0), 0.6, name: \"b\", color: rgb(\"#cc8963\")),
@@ -333,17 +333,22 @@ render-scene(scene, camera(azimuth: 30deg, elevation: 20deg), width: 5cm)",
     inset: (x: 0pt, y: 3pt),
     align: (left + top, left + top, left + top),
     [*Primitive*], [*Default*], [*Named anchors*],
-    [`sphere`], [`center`], [`center`; compass directions; angles via `anchor-ref`],
+    [`sphere`], [`center`], [`center`; compass; `x±`/`y±`/`z±`; angle or 3-vector],
     [`seg`, `edge`, `arrow`], [`mid`], [`start`, `mid`, `end`],
     [`face`], [`centroid`], [`centroid`, `vertex-0`, `vertex-1`, ...],
     [`mesh`], [`center`], [`center`, `vertex-0`, `vertex-1`, ...],
     [`label`], [`center`], [its attachment-point `center`],
   ))
 
-Use `anchor-ref("a", anchor: 30deg)` for an angular sphere border anchor.
-`anchor-of(scene, camera, "bond.mid")` returns the corresponding concrete 3D
-point, while `anchor-names` lists an object's named anchors. Affine groups also
-work on references: their transform is applied after the reference resolves.
+At line-like endpoints, a bare sphere name automatically attaches to the 3D
+surface facing the other endpoint. Explicit `"a.center"` or `"a.z+"` references
+override that behavior. Compass names and `anchor-ref("a", anchor: 30deg)` are
+camera-relative; `x±`/`y±`/`z±` and
+`anchor-ref("a", anchor: (1, 1, 1))` are world-space surface directions.
+`anchor-of(scene, camera, "bond.mid")` returns a concrete 3D point, while
+`anchor-names` lists named anchors. Affine groups defer reference transforms;
+automatic attachment is limited to direct references, so transformed references
+should use explicit anchors.
 
 = Transforms & groups
 
@@ -628,7 +633,7 @@ anything. `unit:` sets canvas units per scene unit.
   let scene = build-scene(
     sphere((0,0,0), 0.55, name: \"a\", color: palette-color(default-theme, 0)),
     sphere((2.2,0,0), 0.55, name: \"b\", color: palette-color(default-theme, 1)),
-    seg(\"a.east\", \"b.west\", name: \"bond\"),
+    seg(\"a\", \"b\", name: \"bond\"),
   )
   scene-group(
     scene, camera(azimuth: 30deg, elevation: 20deg), unit: 1,
@@ -702,7 +707,7 @@ name (@sec-prims explains why not `*`).
 ))
 
 #api("Named coordinates", (
-  [`anchor-ref(name, anchor:)`], [Explicit reference, including angular sphere anchors.],
+  [`anchor-ref(name, anchor:)`], [Explicit name, screen angle, or world 3-vector direction.],
   [`resolve-scene(scene, camera)`], [Resolves references to concrete geometry.],
   [`anchor-of(scene, camera, reference)`], [Returns a concrete 3D anchor point.],
   [`anchor-names(scene, camera, name)`], [Lists an object's named anchors.],

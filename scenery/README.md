@@ -43,16 +43,20 @@ Give a primitive a unique `name:` and use CeTZ-style `"object.anchor"` reference
 #let scene = build-scene(
   sphere((0, 0, 0), 0.6, name: "a"),
   sphere((2, 0, 0), 0.6, name: "b"),
-  seg("a.east", "b.west", name: "bond"),
+  seg("a", "b", name: "bond"),
   label("bond.mid", [d], text-anchor: "south"),
 )
 ```
 
-References may point forward because the complete scene registry is resolved at render time. Sphere compass anchors are camera-relative points on the visible silhouette. Use `anchor-ref("a", anchor: 30deg)` for an angular sphere anchor, and `anchor-of(scene, camera, "bond.mid")` to query a concrete 3D point. Shape-generator inputs and affine transform parameters remain concrete vectors; references belong to the primitives those APIs produce or transform.
+References may point forward because the complete scene registry is resolved at render time. A bare sphere name at a `seg`, `edge`, or `arrow` endpoint automatically attaches to the 3D surface facing the opposite endpoint; use an explicit anchor such as `"a.center"` or `"a.z+"` to override it.
+
+Sphere compass anchors and angles such as `anchor-ref("a", anchor: 30deg)` are camera-relative points on the visible silhouette. The anchors `x+`, `x-`, `y+`, `y-`, `z+`, and `z-` are fixed world-space directions. `anchor-ref("a", anchor: (1, 1, 1))` normalizes an arbitrary 3D direction onto the sphere surface. `anchor-of(scene, camera, "bond.mid")` queries a concrete 3D point.
+
+Shape-generator inputs and affine transform parameters remain concrete vectors; references belong to the primitives those APIs produce or transform. Automatic surface attachment is limited to direct references—use explicit anchors for deferred transformed references.
 
 | Primitive | Default | Anchors |
 | --- | --- | --- |
-| `sphere` | `center` | `center`, compass directions; angles via `anchor-ref` |
+| `sphere` | `center` | `center`, compass directions, `x±`/`y±`/`z±`; angle or 3-vector via `anchor-ref` |
 | `seg`, `edge`, `arrow` | `mid` | `start`, `mid`, `end` |
 | `face` | `centroid` | `centroid`, `vertex-0`, `vertex-1`, … |
 | `mesh` | bounding-box `center` | `center`, `vertex-0`, `vertex-1`, … |
@@ -89,7 +93,7 @@ Grouped by source module; every name below is exported from the package root.
 
 | Name | Description |
 | --- | --- |
-| `anchor-ref(name, anchor:)` | Explicit named-anchor coordinate, including angular sphere anchors. |
+| `anchor-ref(name, anchor:)` | Explicit named anchor, screen-plane angle, or world-space 3-vector direction. |
 | `resolve-scene(scene, camera)` | Resolves every reference and camera-relative anchor to concrete geometry. |
 | `anchor-of(scene, camera, reference)` | Returns one anchor as a concrete 3D point. |
 | `anchor-names(scene, camera, name)` | Lists the named anchors available on an object. |

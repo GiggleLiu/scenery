@@ -40,6 +40,10 @@
 /// -> dictionary
 #let sphere(center, r, ..style, name: none) = {
   _no-pos(style, "sphere")
+  assert(
+    type(r) in (int, float) and r >= 0,
+    message: "sphere radius must be a non-negative number, got " + repr(r),
+  )
   _with-name((kind: "sphere", center: _pt(center), r: r, ..style.named()), name)
 }
 

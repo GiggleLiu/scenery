@@ -13,7 +13,7 @@
 // Forward references resolve from the complete registry, and sphere compass
 // anchors lie on the camera-relative silhouette.
 #let linked = build-scene(
-  seg("a.east", "b.west", name: "bond"),
+  seg("a", "b", name: "bond"),
   label("bond.mid", [d], name: "caption", text-anchor: "south"),
   sphere((0, 0, 0), 1, name: "a"),
   sphere((4, 0, 0), 1, name: "b"),
@@ -27,6 +27,12 @@
 #assert(close(bond.b, (3, 0, 0)))
 #assert(close(anchor-of(linked, cam0, "bond.mid"), (2, 0, 0)))
 #assert(close(anchor-of(linked, cam0, "a.north"), (0, 0, 1)))
+#assert(close(anchor-of(linked, cam0, "a.x+"), (1, 0, 0)))
+#assert(close(anchor-of(linked, cam0, "a.x-"), (-1, 0, 0)))
+#assert(close(anchor-of(linked, cam0, "a.y+"), (0, 1, 0)))
+#assert(close(anchor-of(linked, cam0, "a.y-"), (0, -1, 0)))
+#assert(close(anchor-of(linked, cam0, "a.z+"), (0, 0, 1)))
+#assert(close(anchor-of(linked, cam0, "a.z-"), (0, 0, -1)))
 #assert(anchor-names(linked, cam0, "bond") == ("default", "start", "mid", "end"))
 #let bond-fragments = _clip-lines(resolved.prims, cam0).filter(
   p => p.kind == "seg" and p.at("name", default: none) == "bond"
@@ -41,12 +47,47 @@
 #assert(close(anchor-of(resolved, cam90, "a.east"), (0, 1, 0)))
 #let diagonal = anchor-of(linked, cam0, anchor-ref("a", anchor: 45deg))
 #assert(close(diagonal, (calc.sqrt(0.5), 0, calc.sqrt(0.5))))
+#let diagonal-3d = anchor-of(linked, cam0, anchor-ref("a", anchor: (1, 1, 1)))
+#let inv-sqrt3 = 1 / calc.sqrt(3)
+#assert(close(diagonal-3d, (inv-sqrt3, inv-sqrt3, inv-sqrt3)))
 #let tilted = camera(azimuth: 20deg, elevation: 35deg)
 #let tilted-center = project(tilted, anchor-of(linked, tilted, "a.center"))
 #let tilted-north = project(tilted, anchor-of(linked, tilted, "a.north"))
 #assert(calc.abs(tilted-north.sx - tilted-center.sx) < 1e-8)
 #assert(calc.abs(tilted-north.sy - tilted-center.sy - 1) < 1e-8)
 #assert(calc.abs(tilted-north.depth - tilted-center.depth) < 1e-8)
+#assert(close(anchor-of(linked, tilted, "a.x+"), anchor-of(linked, cam0, "a.x+")),
+  message: "world-axis anchors must be camera invariant")
+
+// Bare sphere references on every line-like primitive attach in the 3D
+// direction of the opposite endpoint. Explicit anchors retain full control.
+#let connections = build-scene(
+  sphere((0, 0, 0), 1, name: "sa"),
+  sphere((4, 3, 0), 2, name: "sb"),
+  seg("sa", "sb", name: "auto-seg"),
+  edge("sa", (0, 0, 4), name: "auto-edge"),
+  arrow((-4, 0, 0), "sa", name: "auto-arrow"),
+  seg("sa.center", "sb.x-", name: "explicit"),
+)
+#assert(close(anchor-of(connections, cam0, "auto-seg.start"), (0.8, 0.6, 0)))
+#assert(close(anchor-of(connections, cam0, "auto-seg.end"), (2.4, 1.8, 0)))
+#assert(close(anchor-of(connections, cam0, "auto-edge.start"), (0, 0, 1)))
+#assert(close(anchor-of(connections, cam0, "auto-edge.end"), (0, 0, 4)))
+#assert(close(anchor-of(connections, cam0, "auto-arrow.end"), (-1, 0, 0)))
+#assert(close(anchor-of(connections, cam0, "explicit.start"), (0, 0, 0)))
+#assert(close(anchor-of(connections, cam0, "explicit.end"), (2, 3, 0)))
+
+// Deferred transformed references deliberately keep ordinary default-anchor
+// resolution; non-sphere bare references likewise retain their defaults.
+#let fallback-connections = build-scene(
+  sphere((0, 0, 0), 1, name: "source-sphere"),
+  label((2, 0, 0), [point], name: "point-label"),
+  scene-group-transform(translate((5, 0, 0)),
+    seg("source-sphere", (10, 0, 0), name: "transformed-bare")),
+  seg("point-label", (4, 0, 0), name: "non-sphere-bare"),
+)
+#assert(close(anchor-of(fallback-connections, cam0, "transformed-bare.start"), (5, 0, 0)))
+#assert(close(anchor-of(fallback-connections, cam0, "non-sphere-bare.start"), (2, 0, 0)))
 
 // Every primitive family exposes its documented logical anchors.
 #let kinds = build-scene(
@@ -100,6 +141,7 @@ Named anchors OK
   scene-group(linked, cam0, unit: 1)
   import cetz.draw: circle, line
   circle("a.north", radius: 0.08, fill: black)
+  circle("a.z+", radius: 0.05, fill: black)
   circle("bond.mid", radius: 0.06, fill: black)
   line("a.east", "b.west", stroke: (paint: black, thickness: 0.4pt))
 })
