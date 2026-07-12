@@ -101,6 +101,19 @@ a periodic structure.
 #crystal(import-poscar("POSCAR"))
 ```
 
+`import-cif(path)` reads a CIF file (pragmatic subset). Symmetry is handled in
+priority order: an explicit `_symmetry_equiv_pos_as_xyz` /
+`_space_group_symop_operation_xyz` loop is applied directly (the path most
+database exports take); otherwise a spacegroup identifier
+(`_space_group_IT_number` or an H-M symbol) selects wyckoff's own tables to
+expand the asymmetric unit; files with neither — like partial occupancy or
+multi-block files — are rejected with an error naming the unsupported feature.
+
+```typst
+#import "@preview/wyckoff:0.1.0": import-cif, crystal
+#crystal(import-cif("nacl.cif"))
+```
+
 ## `crystal()` options
 
 ```typst

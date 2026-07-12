@@ -1,4 +1,4 @@
-#import "/src/symmetry.typ": expand
+#import "/src/symmetry.typ": expand, expand-general
 #import "/src/data.typ": group-data
 
 #let frac-close(p, q, periodic) = {
@@ -41,4 +41,40 @@
       message: kind + " " + str(num) + " wyckoff " + letter + ": " + str(atoms.len()) + " != " + str(w.mult))
   }
 }
+// ---- expand-general: explicit asymmetric-unit atoms as general positions ----
+
+// NaCl in Fm-3m (225): both atoms sit on special positions; each 4-atom orbit.
+#let g225 = group-data("3d", 225)
+#let p3 = (true, true, true)
+#let nacl = expand-general(g225, (("Na", (0.0, 0.0, 0.0)), ("Cl", (0.5, 0.0, 0.0))), p3)
+#assert.eq(nacl.len(), 8)
+#for want in ((0.0, 0.0, 0.0), (0.0, 0.5, 0.5), (0.5, 0.0, 0.5), (0.5, 0.5, 0.0)) {
+  assert(nacl.any(a => a.element == "Na" and frac-close(a.frac, want, p3)),
+    message: "expand-general: missing Na at " + repr(want))
+}
+#for want in ((0.5, 0.0, 0.0), (0.0, 0.5, 0.0), (0.0, 0.0, 0.5), (0.5, 0.5, 0.5)) {
+  assert(nacl.any(a => a.element == "Cl" and frac-close(a.frac, want, p3)),
+    message: "expand-general: missing Cl at " + repr(want))
+}
+
+// Must agree atom-for-atom with the Wyckoff-letter path (4a + 4b of 225).
+#let via-wyckoff = expand(g225, (
+  (element: "Na", wyckoff: "a", p: (0.0, 0.0, 0.0)),
+  (element: "Cl", wyckoff: "b", p: (0.0, 0.0, 0.0)),
+), p3)
+#assert.eq(via-wyckoff.len(), 8)
+#for a in via-wyckoff {
+  assert(nacl.any(b => b.element == a.element and frac-close(b.frac, a.frac, p3)),
+    message: "expand-general disagrees with expand at " + repr(a.frac))
+}
+
+// Rutile TiO2 in P42/mnm (136): unequal orbit sizes — no multiplicity assert.
+#let g136 = group-data("3d", 136)
+#let rutile = expand-general(g136, (("Ti", (0.0, 0.0, 0.0)), ("O", (0.305, 0.305, 0.0))), p3)
+#assert.eq(rutile.len(), 6)
+#assert.eq(rutile.filter(a => a.element == "Ti").len(), 2)
+#assert.eq(rutile.filter(a => a.element == "O").len(), 4)
+#assert(rutile.any(a => a.element == "O" and frac-close(a.frac, (0.805, 0.195, 0.5), p3)),
+  message: "rutile O at (1/2+x, 1/2-x, 1/2) missing")
+
 Symmetry OK
