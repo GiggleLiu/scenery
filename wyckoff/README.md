@@ -122,7 +122,7 @@ multi-block files — are rejected with an error naming the unsupported feature.
 
 | Option | Default | Meaning |
 | --- | --- | --- |
-| `view` | `(azimuth: 25deg, elevation: 15deg)` | Camera orientation (orthographic). |
+| `view` | `(azimuth: 25deg, elevation: 15deg)` | Camera orientation (orthographic by default; see [Perspective camera](#perspective-camera)). |
 | `supercell` | `(1, 1, 1)` | Repetitions along a, b, c. |
 | `bonds` | `auto` | `auto`, `none`, or an array of explicit rules (below). |
 | `polyhedra` | `()` | Elements to draw coordination polyhedra around, e.g. `("Ti",)`. |
@@ -164,6 +164,21 @@ pass `bond-color: <color>` to draw each bond as a single stick in that color
 instead (ball-and-stick and licorice).
 
 <img src="images/render-modes.png" width="760">
+
+### Perspective camera
+
+The `view:` dictionary accepts `mode: "perspective"` with a `distance:` in
+Ångström (the camera's distance from the scene origin; smaller = stronger
+foreshortening, default 25):
+
+```typst
+#crystal(s, view: (azimuth: 25deg, elevation: 15deg,
+  mode: "perspective", distance: 18))
+```
+
+The default remains orthographic and is pixel-identical to earlier versions.
+
+<img src="images/perspective.png" width="760">
 
 ## Prototypes
 

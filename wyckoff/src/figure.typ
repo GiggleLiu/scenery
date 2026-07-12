@@ -49,13 +49,19 @@
 
   let az = view.at("azimuth", default: 25deg)
   let elev = view.at("elevation", default: 15deg)
-  let cam = scenery.camera(azimuth: az, elevation: elev)
+  let cam = scenery.camera(
+    azimuth: az, elevation: elev,
+    mode: view.at("mode", default: "orthographic"),
+    distance: view.at("distance", default: 25.0),
+  )
 
   // Depth-only offset: the old renderer pushed polyhedra faces back by 0.01 in
   // depth (`cdepth - 0.01`). The camera-forward direction changes ONLY depth
   // (screen x/y are invariant), so offsetting face vertices along it by -0.01
   // reproduces the old depth key exactly while leaving projected geometry — and
   // hence the screen bbox and every drawn pixel — untouched.
+  // (Exact for orthographic; under perspective the 0.01 depth push shifts
+  // screen x/y by ~0.01/distance — visually negligible.)
   let gdepth = (-calc.sin(az) * calc.cos(elev), calc.cos(az) * calc.cos(elev), calc.sin(elev))
   let face-offset = scenery.vscale(gdepth, -0.01)
 
@@ -134,8 +140,11 @@
   for p in prims {
     if p.kind == "sphere" {
       let s = scenery.project(cam, p.center)
-      xs += (s.sx - p.r, s.sx + p.r)
-      ys += (s.sy - p.r, s.sy + p.r)
+      // Screen radius: world radius times the camera's depth magnification
+      // (exactly 1.0 for orthographic — wyckoff pixel parity).
+      let rs = p.r * scenery.project-scale(cam, s.depth)
+      xs += (s.sx - rs, s.sx + rs)
+      ys += (s.sy - rs, s.sy + rs)
     } else if p.kind == "face" {
       for q in p.pts {
         let s = scenery.project(cam, q)
@@ -202,12 +211,16 @@
 /// with the SAME slacks (`2*r`, `0.45*w`). All spheres and all (unfiltered) segs
 /// participate in the coverage test, exactly as the old draw loop did.
 #let occlude(prims, cam) = {
-  let spheres = prims.filter(p => p.kind == "sphere").map(p => (
-    c: _proj2(cam, p.center), r: p.r, depth: _pdepth(cam, p.center),
-  ))
-  let segs = prims.filter(p => p.kind == "seg").map(p => (
-    a: _proj2(cam, p.a), b: _proj2(cam, p.b), w: p.w, depth: _pdepth(cam, _mid(p.a, p.b)),
-  ))
+  let spheres = prims.filter(p => p.kind == "sphere").map(p => {
+    let q = scenery.project(cam, p.center)
+    // Disk radius in screen units (depth-scaled; x1.0 under orthographic).
+    (c: (q.sx, q.sy), r: p.r * scenery.project-scale(cam, q.depth), depth: q.depth)
+  })
+  let segs = prims.filter(p => p.kind == "seg").map(p => {
+    let d = _pdepth(cam, _mid(p.a, p.b))
+    (a: _proj2(cam, p.a), b: _proj2(cam, p.b),
+     w: p.w * scenery.project-scale(cam, d), depth: d)
+  })
   // A bond stub is hidden when it projects fully inside a sphere's disk and is
   // not clearly in front of that sphere (2r slack).
   let seg-hidden(sa, sb, sd) = spheres.any(sp =>
