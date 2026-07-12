@@ -1,4 +1,4 @@
-"""Generate data/elements.json: Jmol/VESTA colors + covalent/atomic radii per element."""
+"""Generate data/elements.json: Jmol/VESTA colors + covalent/atomic/van-der-Waals radii per element."""
 import json
 from pathlib import Path
 
@@ -6,7 +6,9 @@ from pymatgen.core.periodic_table import Element
 from pymatgen.analysis.local_env import CovalentRadius
 from pymatgen.vis.structure_vtk import EL_COLORS
 
-OUT = Path(__file__).resolve().parent.parent / "data" / "elements.json"
+# Data lives inside the wyckoff package (the monorepo layout moved it there);
+# the generators sit at the shared repo-root tools/ dir.
+OUT = Path(__file__).resolve().parent.parent / "wyckoff" / "data" / "elements.json"
 
 def hexcolor(rgb):
     return "#{:02X}{:02X}{:02X}".format(*rgb)
@@ -18,18 +20,30 @@ for el in Element:
     r_atom = float(el.atomic_radius) if el.atomic_radius is not None else None
     if r_cov is None and r_atom is None:
         continue  # exotic elements without any radius data
+    r_atom_eff = float(r_atom if r_atom is not None else r_cov)
+    # van der Waals radius for CPK/space-filling mode. pymatgen's table covers
+    # every element we emit; where it is ever missing, fall back to 1.5*r-atom
+    # (raw r-atom is roughly HALF a vdW radius and would render fallback atoms
+    # visibly shrunken in CPK mode -- see the M4 design doc, "Data changes").
+    r_vdw = el.van_der_waals_radius  # FloatWithUnit (angstrom) or None
+    r_vdw_eff = float(r_vdw) if r_vdw is not None else 1.5 * r_atom_eff
     data[sym] = {
         "color": hexcolor(EL_COLORS["Jmol"].get(sym, (128, 128, 128))),
         "color-vesta": hexcolor(EL_COLORS["VESTA"].get(sym, (128, 128, 128))),
         "r-cov": round(float(r_cov if r_cov is not None else r_atom), 3),
-        "r-atom": round(float(r_atom if r_atom is not None else r_cov), 3),
+        "r-atom": round(r_atom_eff, 3),
+        "r-vdw": round(r_vdw_eff, 3),
     }
     # Schema contract: radii are always floats (json() preserves int vs float).
-    assert isinstance(data[sym]["r-cov"], float), f"{sym} r-cov not float"
-    assert isinstance(data[sym]["r-atom"], float), f"{sym} r-atom not float"
+    for key in ("r-cov", "r-atom", "r-vdw"):
+        assert isinstance(data[sym][key], float), f"{sym} {key} not float"
+    assert 0.9 < data[sym]["r-vdw"] < 4.0, f"{sym} r-vdw {data[sym]['r-vdw']} out of range"
 
 assert len(data) > 90, f"only {len(data)} elements"
 assert abs(data["O"]["r-cov"] - 0.66) < 0.05
+assert abs(data["O"]["r-vdw"] - 1.52) < 0.01, "O vdW must be 1.52 (pymatgen/Bondi)"
+assert abs(data["C"]["r-vdw"] - 1.70) < 0.01, "C vdW must be 1.70"
+assert data["Na"]["r-vdw"] > data["Na"]["r-atom"], "vdW must exceed atomic radius"
 OUT.parent.mkdir(exist_ok=True)
 OUT.write_text(json.dumps(data, indent=1, sort_keys=True))
 print(f"wrote {OUT} ({len(data)} elements)")
