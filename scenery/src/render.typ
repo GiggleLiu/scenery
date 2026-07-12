@@ -14,7 +14,7 @@
 //     `_sphere-fill` is the guarded, pure helper carrying that weighting.
 
 #import "@preview/cetz:0.5.2"
-#import "camera.typ": project
+#import "camera.typ": project, project-scale
 #import "linalg.typ": vadd, vsub, vscale, vdot, vcross, vlen
 #import "style.typ": default-theme, resolve-style, face-brightness
 #import "anchors.typ": resolve-scene
@@ -212,9 +212,15 @@
 // orthographic camera. Behind the centre plane, the whole projected disk hides
 // the line. In front of that plane, only the part inside the actual sphere is
 // hidden; a line nearer than the sphere's front surface remains visible.
+// Under a perspective camera the projected disk uses the depth-scaled radius
+// (via _projected-sphere); the front-hemisphere refinement mixes screen units
+// with view depth and is exact for orthographic, approximate (conservative)
+// for mild perspective.
 #let _projected-sphere(sp, camera) = {
   let p = project(camera, sp.center)
-  (sx: p.sx, sy: p.sy, depth: p.depth, r: sp.r)
+  // Screen-space occluder disk. Under perspective a sphere's silhouette radius
+  // depends on its depth; project-scale is exactly 1.0 for orthographic/2d.
+  (sx: p.sx, sy: p.sy, depth: p.depth, r: sp.r * project-scale(camera, p.depth))
 }
 
 #let _overlap1(a0, a1, b0, b1) = calc.min(a0, a1) <= calc.max(b0, b1) and calc.max(a0, a1) >= calc.min(b0, b1)
@@ -512,10 +518,11 @@
   let st = resolve-style(theme, p)
   let k = p.kind
   if k == "sphere" {
+    let q = project(camera, p.center)
     (
       kind: k,
-      pos: _screen(camera, unit, p.center),
-      radius: p.r * unit,
+      pos: (q.sx * unit, q.sy * unit),
+      radius: p.r * project-scale(camera, q.depth) * unit,
       color: st.color,
       stroke: (paint: st.color.darken(st.stroke-darken), thickness: st.stroke-width),
     )
@@ -524,7 +531,11 @@
       kind: k,
       a: _screen(camera, unit, p.a),
       b: _screen(camera, unit, p.b),
-      stroke: (paint: st.color, thickness: st.w * unit * 1cm, cap: "round"),
+      stroke: (
+        paint: st.color,
+        thickness: st.w * project-scale(camera, project(camera, _mid(p.a, p.b)).depth) * unit * 1cm,
+        cap: "round",
+      ),
     )
   } else if k == "edge" {
     (
@@ -534,13 +545,14 @@
       stroke: (paint: st.color, thickness: st.width),
     )
   } else if k == "arrow" {
+    let wsc = project-scale(camera, project(camera, _mid(p.from, p.to)).depth)
     (
       kind: k,
       a: _screen(camera, unit, p.from),
       b: _screen(camera, unit, p.to),
-      stroke: (paint: st.color, thickness: st.w * unit * 1cm, cap: "round"),
+      stroke: (paint: st.color, thickness: st.w * wsc * unit * 1cm, cap: "round"),
       mark: if p.at("draw-head", default: true) {
-        (end: st.head, fill: st.color, scale: st.head-scale * st.w * unit)
+        (end: st.head, fill: st.color, scale: st.head-scale * st.w * wsc * unit)
       } else { none },
     )
   } else if k == "face" {

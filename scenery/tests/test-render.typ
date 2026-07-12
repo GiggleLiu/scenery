@@ -2,7 +2,7 @@
 #import "/src/shape.typ": uv-sphere, cylinder
 #import "/src/camera.typ": camera
 #import "/src/style.typ": default-theme
-#import "/src/render.typ": sort-prims, scene-group, render-scene, _sphere-fill, _clip-lines, _prepare-faces, _record
+#import "/src/render.typ": sort-prims, scene-group, render-scene, _sphere-fill, _clip-lines, _prepare-faces, _record, _projected-sphere
 #import "@preview/cetz:0.5.2"
 
 // A camera with azimuth = elevation = 0 projects (x, y, z) to
@@ -264,6 +264,16 @@
   _sphere-fill(col) != white.mix((col, 75%)),
   message: "sphere fill regressed to the white.mix(..) mis-weighting",
 )
+
+// --- perspective: projected sphere radius scales with depth -------------------
+#let pcam = camera(azimuth: 0deg, elevation: 0deg, mode: "perspective", distance: 10)
+#let near-sp = _projected-sphere((kind: "sphere", center: (0, 5, 0), r: 1.0), pcam)
+#assert(calc.abs(near-sp.r - 2.0) < 1e-9, message: "near sphere silhouette doubles")
+#let far-sp = _projected-sphere((kind: "sphere", center: (0, -10, 0), r: 1.0), pcam)
+#assert(calc.abs(far-sp.r - 0.5) < 1e-9, message: "far sphere silhouette halves")
+#assert(near-sp.r > far-sp.r, message: "nearer sphere must project larger")
+// negative control: the orthographic occluder radius is untouched
+#assert.eq(_projected-sphere((kind: "sphere", center: (0, 5, 0), r: 1.0), cam0).r, 1.0)
 
 Render sort OK
 
