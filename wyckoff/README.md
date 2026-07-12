@@ -92,6 +92,15 @@ When you already have expanded coordinates, skip symmetry entirely: pass three l
 #molecule(import-xyz("water.xyz"))
 ```
 
+`import-poscar(path)` reads a VASP 5 `POSCAR`/`CONTCAR` (element-symbols line
+required; Direct or Cartesian coordinates; positive scale factor) and returns
+a periodic structure.
+
+```typst
+#import "@preview/wyckoff:0.1.0": import-poscar, crystal
+#crystal(import-poscar("POSCAR"))
+```
+
 ## `crystal()` options
 
 ```typst

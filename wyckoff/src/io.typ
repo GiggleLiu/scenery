@@ -29,3 +29,12 @@
   let record = json(_io.parse_xyz(raw))
   record-to-structure(record)
 }
+
+/// Read a VASP 5 POSCAR/CONTCAR file and return a periodic structure.
+/// Direct and Cartesian coordinate modes are supported; the scale factor is
+/// applied to the lattice (and, per VASP semantics, to Cartesian positions).
+#let import-poscar(path) = {
+  let raw = read(path, encoding: none)   // bytes
+  let record = json(_io.parse_poscar(raw))
+  record-to-structure(record)
+}
