@@ -80,6 +80,18 @@ When you already have expanded coordinates, skip symmetry entirely: pass three l
 ))
 ```
 
+### Importing from files
+
+`import-xyz(path)` reads an `.xyz` or extended-xyz file (parsed by the bundled
+`wyckoff-io` WASM plugin) and returns a renderable structure. A plain `.xyz`
+(Cartesian atoms, no lattice) becomes a molecule; extended-xyz with a
+`Lattice="..."` header becomes a periodic cell.
+
+```typst
+#import "@preview/wyckoff:0.1.0": import-xyz, molecule
+#molecule(import-xyz("water.xyz"))
+```
+
 ## `crystal()` options
 
 ```typst
