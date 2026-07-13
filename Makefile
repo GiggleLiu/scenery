@@ -32,6 +32,7 @@ check-links:
 # each package's `plugin` target where it exists.
 plugin:
 	@$(MAKE) -C wyckoff plugin
+	@$(MAKE) -C scenery plugin
 	@echo "Plugin(s) built."
 
 test: pkgroot check-links

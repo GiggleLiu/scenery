@@ -1,4 +1,4 @@
-.PHONY: all test examples images manual clean
+.PHONY: all test examples images manual plugin clean
 
 TYPST = typst compile --root .
 TESTS := $(wildcard tests/test-*.typ)
@@ -41,6 +41,18 @@ images:
 	  echo "== $$f"; \
 	  $(TYPST) --format png --ppi 144 $$f images/$$(basename $${f%.typ}).png || exit 1; \
 	done
+
+PLUGIN_CRATE = ../scenery-engine
+WASM_OUT = plugin/scenery_engine.wasm
+
+plugin:
+	cargo build --manifest-path ../Cargo.toml -p scenery-engine --release --target wasm32-unknown-unknown
+	@mkdir -p plugin
+	cp ../target/wasm32-unknown-unknown/release/scenery_engine.wasm $(WASM_OUT)
+	@if command -v wasm-opt >/dev/null 2>&1; then \
+	  echo "wasm-opt -Oz"; wasm-opt -Oz $(WASM_OUT) -o $(WASM_OUT); \
+	else echo "wasm-opt not found, skipping (optional)"; fi
+	@ls -l $(WASM_OUT)
 
 clean:
 	rm -f tests/*.pdf examples/*.pdf manual.pdf

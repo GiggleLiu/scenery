@@ -31,9 +31,9 @@ PLUGIN_CRATE = ../wyckoff-io
 WASM_OUT = plugin/wyckoff_io.wasm
 
 plugin:
-	cargo build --manifest-path $(PLUGIN_CRATE)/Cargo.toml --release --target wasm32-unknown-unknown
+	cargo build --manifest-path ../Cargo.toml -p wyckoff-io --release --target wasm32-unknown-unknown
 	@mkdir -p plugin
-	cp $(PLUGIN_CRATE)/target/wasm32-unknown-unknown/release/wyckoff_io.wasm $(WASM_OUT)
+	cp ../target/wasm32-unknown-unknown/release/wyckoff_io.wasm $(WASM_OUT)
 	@if command -v wasm-opt >/dev/null 2>&1; then \
 	  echo "wasm-opt -Oz"; wasm-opt -Oz $(WASM_OUT) -o $(WASM_OUT); \
 	else echo "wasm-opt not found, skipping (optional)"; fi
