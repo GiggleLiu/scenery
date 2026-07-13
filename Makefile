@@ -60,10 +60,10 @@ site-assets: pkgroot
 	@# the browser — keep site/ in sync with the committed plugin.
 	cp scenery/plugin/scenery_engine.wasm site/assets/scenery_engine.wasm
 
-# Preview the showcase site locally: http://localhost:$(PORT)/
+# Preview the showcase site locally. Binds the first free port at or above
+# $(PORT), so a second `make serve` just lands on the next one.
 serve:
-	@echo "Serving site/ at http://localhost:$(PORT)/  (Ctrl-C to stop)"
-	@cd site && python3 -m http.server $(PORT)
+	@python3 -u tools/serve.py $(PORT)
 
 # Showcase manual(s). Only scenery ships one today; the fan-out builds each
 # package's `manual` target where it exists.
