@@ -1,7 +1,8 @@
-# Pins the toolchain so the committed wyckoff-io wasm blob rebuilds deterministically.
-# CI enforces byte-identity (see .github/workflows/ci.yml, "Verify wasm blob is
-# reproducible"): the committed wyckoff/plugin/wyckoff_io.wasm must match a fresh
-# build under exactly this toolchain. Bump `channel` only alongside a rebuilt blob.
+# Pins the toolchain so the committed plugin wasm blobs (wyckoff/plugin/
+# wyckoff_io.wasm, scenery/plugin/scenery_engine.wasm) rebuild deterministically.
+# CI rebuilds both crates fresh and runs the Typst suites against those builds
+# (functional gate; cross-OS wasm output is not byte-reproducible).
+# Bump `channel` only alongside rebuilt blobs.
 [toolchain]
 channel = "1.93.1"
 targets = ["wasm32-unknown-unknown"]

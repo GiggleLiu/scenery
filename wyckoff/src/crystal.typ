@@ -16,11 +16,12 @@
   radius: auto,
   colors: (:),
   width: 8cm,
+  engine: "typst",
 ) = {
   let scene = build-scene(structure, view: view, supercell: supercell,
     mode: mode, bonds: bonds, bond-color: bond-color, polyhedra: polyhedra,
-    labels: labels, radius: radius, colors: colors)
-  render(scene, width: width, legend: legend,
+    labels: labels, radius: radius, colors: colors, engine: engine)
+  render(scene, width: width, legend: legend, engine: engine,
     axes-info: if axes {
       (vectors: structure.vectors, view: view,
        n-axes: if structure.periodic.at(2) { 3 } else { 2 })
@@ -39,11 +40,12 @@
   radius: auto,
   colors: (:),
   scale: 1.0,
+  engine: "typst",
 ) = {
   let scene = build-scene(structure, view: view, supercell: supercell,
     mode: mode, bonds: bonds, bond-color: bond-color, polyhedra: polyhedra,
-    labels: labels, radius: radius, colors: colors)
-  draw-scene(scene, scale: scale)
+    labels: labels, radius: radius, colors: colors, engine: engine)
+  draw-scene(scene, scale: scale, engine: engine)
 }
 
 /// Render a non-periodic molecule: atoms + bonds, no unit cell, no
@@ -60,9 +62,10 @@
   colors: (:),
   mode: "ball-and-stick",
   width: 8cm,
+  engine: "typst",
 ) = {
   let scene = build-scene(structure, view: view, supercell: (1, 1, 1),
     mode: mode, bonds: bonds, bond-color: bond-color, polyhedra: (),
-    labels: labels, radius: radius, colors: colors)
-  render(scene, width: width, legend: legend, axes-info: none)
+    labels: labels, radius: radius, colors: colors, engine: engine)
+  render(scene, width: width, legend: legend, axes-info: none, engine: engine)
 }
