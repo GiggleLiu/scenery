@@ -1,25 +1,45 @@
 #import "/src/engine.typ": engine-version, engine-sort
-#import "/src/scene.typ": sphere, seg, edge, arrow, face, label
+#import "/src/scene.typ": sphere, seg, edge, arrow, face, label, build-scene, mesh
+#import "/src/shape.typ": uv-sphere
 #import "/src/camera.typ": camera, camera-2d
+#import "/src/render.typ": sort-prims, _prepare-faces
 
-// The second wasm artifact loads and reports its version.
 #assert.eq(engine-version(), "scenery-engine 0.1.0")
 
-// CBOR boundary smoke: every prim kind round-trips; the stub returns one
-// record per prim carrying the ORIGINAL primitive's styling hooks (index
-// reassembly works). Order/depth semantics land in Task 2.
-#let ps = (
-  sphere((0.0, 5.0, 0.0), 1.0, color: red),
-  seg((0.0, 3.0, -1.0), (0.0, 3.0, 1.0)),
-  edge((0.0, -1.0, -1.0), (0.0, -1.0, 1.0)),
-  arrow((0.0, 2.0, 0.0), (1.0, 2.0, 0.0)),
-  face(((-1.0, 1.0, -1.0), (1.0, 1.0, -1.0), (0.0, 1.0, 1.0))),
-  label((0.0, 0.0, 0.0), [L]),
-)
-#let out = engine-sort(ps, camera(azimuth: 25deg, elevation: 15deg))
-#assert.eq(out.len(), 6)
-#assert.eq(out.map(p => p.kind), ("sphere", "seg", "edge", "arrow", "face", "label"))
-#assert.eq(out.first().color, red, message: "styling must survive reassembly")
-#assert(out.all(p => "depth" in p))
+// ============ ORDERING-EQUIVALENCE GATE, level (a) ============
+// Scenes where NEITHER path splits anything: engine output must be EXACTLY
+// equal (assert.eq on full dicts, depth included) to the pure path. Until
+// Task 3 the engine does not clip, so the pure comparator is sort-prims over
+// _prepare-faces output (the same keys-and-stable-sort stage the engine mirrors).
+#let gate(prims, cam) = {
+  let prepared = _prepare-faces(prims, cam)
+  assert.eq(engine-sort(prepared, cam), sort-prims(prepared, cam))
+}
 
-Engine boundary OK
+// The documented 4-prim scene (test-render.typ) + its shuffle, exact depths.
+#let cam0 = camera(azimuth: 0deg, elevation: 0deg)
+#let ps = (
+  edge((0, -1, -1), (0, -1, 1)),
+  face(((-1, 1, -1), (1, 1, -1), (0, 1, 1))),
+  seg((0, 3, -1), (0, 3, 1)),
+  sphere((0, 5, 0), 1),
+  label((0, 0, 0), [L]),
+)
+#gate(ps, cam0)
+#gate(ps.rev(), cam0)
+
+// Generic camera: the engine consumes the SAME cos/sin values Typst computed,
+// so depth keys are bit-identical, not merely close.
+#gate(ps, camera(azimuth: 25deg, elevation: 15deg))
+#gate(ps, camera(azimuth: -73deg, elevation: 41deg))
+
+// Perspective and 2d cameras.
+#gate(ps, camera(azimuth: 25deg, elevation: 15deg, mode: "perspective", distance: 30.0))
+#gate(((sphere((0, 0), 1), seg((1, 1), (2, 2)), label((0, 3), [x]))), camera-2d())
+
+// Meshes: _prepare-faces explodes + culls Typst-side; the engine keys the
+// resulting faces by centroid exactly like sort-prims.
+#let mesh-scene = (uv-sphere((0, 0, 0), 1, segments: 6, rings: 3), sphere((0, 4, 0), 0.5))
+#gate(mesh-scene, camera(azimuth: 25deg, elevation: 15deg))
+
+Engine sort OK
