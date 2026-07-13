@@ -1,9 +1,11 @@
-//! The depth-sort pipeline — the exact mirror of `render.typ`'s depth-key
-//! computation and `sort-prims` stable ordering. Task 2 scope: depth keys +
-//! stable sort only (no cull / clip / bsp yet — those land in T3/T5). The
-//! primitives arriving here are already `_prepare-faces` output (meshes
-//! exploded, culling applied) on the Typst side, so this module never sees a
-//! mesh: it keys each primitive by a single 3-point's camera depth.
+//! The depth-sort pipeline — the exact mirror of `render.typ`'s clip + depth-key
+//! computation and `sort-prims` stable ordering, i.e. `sort-prims(_clip-lines(..))`.
+//! Task 3 scope: line-clipping (`clip::clip_lines`) then depth keys + stable sort
+//! (no bsp yet — that lands in T5). The primitives arriving here are already
+//! `_prepare-faces` output (meshes exploded, culling applied) on the Typst side,
+//! so this module never sees a mesh: it clips lines, then keys each resulting
+//! fragment by a single 3-point's camera depth.
+use crate::clip::{clip_lines, FragGeom};
 use crate::schema::{OutRec, Prim, Request};
 
 /// Midpoint of two points — mirror of `render.typ:70` `_mid`:
@@ -42,26 +44,59 @@ fn depth_point(p: &Prim) -> [f64; 3] {
     }
 }
 
-/// Depth keys + stable back-to-front sort — mirror of `render.typ:499-507`
-/// `sort-prims`. Label depth is the literal `1e9`; every other primitive
-/// projects its depth point. Non-finite depth keys are an error. The stable
-/// ascending sort by `total_cmp` mirrors Typst's stable `.sorted(key:)`,
-/// preserving input order for ties.
+/// Normalize `-0.0` to `+0.0` for the sort KEY only. Typst's `.sorted` treats
+/// `-0.0 == +0.0` (equal, so stable order is preserved), whereas raw `total_cmp`
+/// orders `-0.0 < +0.0`. Now that clipping introduces COMPUTED fragment depths
+/// (any of which could round to `-0.0`), a comparator must match Typst's
+/// equal-treatment or a `-0.0` fragment could sort ahead of a `+0.0` one. The
+/// stored `d` (reported back to Typst) is left bit-exact; only the key is
+/// normalized. `d` is always finite here (checked below), so `total_cmp` on the
+/// normalized key reduces to the ordinary numeric order everywhere else.
+fn sort_key(d: f64) -> f64 {
+    if d == 0.0 {
+        0.0
+    } else {
+        d
+    }
+}
+
+/// Clip + depth keys + stable back-to-front sort — mirror of
+/// `sort-prims(_clip-lines(prims, camera), camera)` (`render.typ:424-507`).
+///
+/// First `clip::clip_lines` splits every seg/edge/arrow into its visible
+/// fragments (in emission order, non-line prims passing through). Then each
+/// fragment gets a depth key: a line fragment keys on its OWN midpoint (the
+/// lerp'd endpoints), a label on the literal `1e9`, everything else on its
+/// depth point. Non-finite keys are an error. The stable ascending sort mirrors
+/// Typst's stable `.sorted(key:)`, preserving emission order for ties (with the
+/// `-0.0`/`+0.0` tie-break normalized to match Typst — see `sort_key`).
 pub fn run(req: &Request) -> Result<Vec<OutRec>, String> {
     let cam = &req.camera;
-    let mut keyed: Vec<OutRec> = Vec::with_capacity(req.prims.len());
-    for (i, p) in req.prims.iter().enumerate() {
-        let d = match p {
-            Prim::Label { .. } => 1e9,
-            _ => cam.project(depth_point(p))?.depth,
+    let frags = clip_lines(&req.prims, cam)?;
+    let mut keyed: Vec<OutRec> = Vec::with_capacity(frags.len());
+    for frag in &frags {
+        let i = frag.i;
+        let (d, a, b, head) = match &frag.prim {
+            FragGeom::PassThrough => {
+                let p = &req.prims[i];
+                let d = match p {
+                    Prim::Label { .. } => 1e9,
+                    _ => cam.project(depth_point(p))?.depth,
+                };
+                (d, None, None, None)
+            }
+            FragGeom::Line { a, b, head } => {
+                // A fragment's depth key is its own midpoint (mirror of
+                // `_depth-point` on the lerp'd seg/edge/arrow fragment).
+                let d = cam.project(mid(*a, *b))?.depth;
+                (d, Some(*a), Some(*b), *head)
+            }
         };
         if !d.is_finite() {
-            return Err(format!(
-                "scenery-engine: non-finite depth for primitive {i}"
-            ));
+            return Err(format!("scenery-engine: non-finite depth for primitive {i}"));
         }
-        keyed.push(OutRec { i, d, a: None, b: None, head: None, pts: None });
+        keyed.push(OutRec { i, d, a, b, head, pts: None });
     }
-    keyed.sort_by(|x, y| x.d.total_cmp(&y.d)); // stable, mirrors Typst .sorted(key:)
+    keyed.sort_by(|x, y| sort_key(x.d).total_cmp(&sort_key(y.d))); // stable, mirrors Typst .sorted(key:)
     Ok(keyed)
 }

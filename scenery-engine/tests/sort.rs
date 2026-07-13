@@ -15,15 +15,21 @@ fn req(camera: Camera, prims: Vec<Prim>) -> Request {
 
 #[test]
 fn documented_scene_sorts_back_to_front() {
-    // edge y=-1, face centroid y=1, seg y=3, sphere y=5 (test-render.typ:22-27)
+    // edge y=-1, face centroid y=1, seg y=3, sphere y=5 (test-render.typ:22-27).
+    // Under cam0 the depth key is exactly y, independent of x. Task 2's fixture
+    // stacked all four at screen x=0; Task 3's now-active clip stage would (rightly)
+    // let the near sphere occlude the lines behind it. To keep this a pure
+    // depth-sort pin, the prims are separated along screen x so no prim overlaps
+    // another's occluder — clipping is a no-op and every prim survives with its
+    // unchanged depth key.
     let prims = vec![
-        Prim::Edge { a: [0.0, -1.0, -1.0], b: [0.0, -1.0, 1.0] },
+        Prim::Edge { a: [10.0, -1.0, -1.0], b: [10.0, -1.0, 1.0] },
         Prim::Face {
             pts: vec![[-1.0, 1.0, -1.0], [1.0, 1.0, -1.0], [0.0, 1.0, 1.0]],
             opaque: true,
         },
-        Prim::Seg { a: [0.0, 3.0, -1.0], b: [0.0, 3.0, 1.0], w: 0.12 },
-        Prim::Sphere { c: [0.0, 5.0, 0.0], r: 1.0 },
+        Prim::Seg { a: [20.0, 3.0, -1.0], b: [20.0, 3.0, 1.0], w: 0.12 },
+        Prim::Sphere { c: [40.0, 5.0, 0.0], r: 1.0 },
     ];
     let out = pipeline::run(&req(cam0(), prims)).unwrap();
     assert_eq!(out.iter().map(|r| r.i).collect::<Vec<_>>(), vec![0, 1, 2, 3]);
@@ -32,15 +38,16 @@ fn documented_scene_sorts_back_to_front() {
 
 #[test]
 fn shuffled_input_recovers_the_same_order() {
-    // Same prims reversed; the back-to-front order recovers indices 3,2,1,0.
+    // Same prims reversed (screen-x-separated, see above); the back-to-front
+    // order recovers indices 3,2,1,0 with clipping a no-op.
     let prims = vec![
-        Prim::Sphere { c: [0.0, 5.0, 0.0], r: 1.0 },
-        Prim::Seg { a: [0.0, 3.0, -1.0], b: [0.0, 3.0, 1.0], w: 0.12 },
+        Prim::Sphere { c: [40.0, 5.0, 0.0], r: 1.0 },
+        Prim::Seg { a: [20.0, 3.0, -1.0], b: [20.0, 3.0, 1.0], w: 0.12 },
         Prim::Face {
             pts: vec![[-1.0, 1.0, -1.0], [1.0, 1.0, -1.0], [0.0, 1.0, 1.0]],
             opaque: true,
         },
-        Prim::Edge { a: [0.0, -1.0, -1.0], b: [0.0, -1.0, 1.0] },
+        Prim::Edge { a: [10.0, -1.0, -1.0], b: [10.0, -1.0, 1.0] },
     ];
     let out = pipeline::run(&req(cam0(), prims)).unwrap();
     assert_eq!(out.iter().map(|r| r.i).collect::<Vec<_>>(), vec![3, 2, 1, 0]);
