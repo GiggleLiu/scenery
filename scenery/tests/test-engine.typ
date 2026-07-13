@@ -2,21 +2,24 @@
 #import "/src/scene.typ": sphere, seg, edge, arrow, face, label, build-scene, mesh
 #import "/src/shape.typ": uv-sphere
 #import "/src/camera.typ": camera, camera-2d
-#import "/src/render.typ": sort-prims, _prepare-faces
+#import "/src/render.typ": sort-prims, _prepare-faces, _clip-lines
 
 #assert.eq(engine-version(), "scenery-engine 0.1.0")
 
-// ============ ORDERING-EQUIVALENCE GATE, level (a) ============
-// Scenes where NEITHER path splits anything: engine output must be EXACTLY
-// equal (assert.eq on full dicts, depth included) to the pure path. Until
-// Task 3 the engine does not clip, so the pure comparator is sort-prims over
-// _prepare-faces output (the same keys-and-stable-sort stage the engine mirrors).
-#let gate(prims, cam) = {
-  let prepared = _prepare-faces(prims, cam)
-  assert.eq(engine-sort(prepared, cam), sort-prims(prepared, cam))
-}
+// ============ FULL-PIPELINE EQUALITY (fragments included) ============
+// The engine now mirrors _clip-lines: for ANY scene (cutting or not), engine
+// output must be EXACTLY equal to sort-prims(_clip-lines(..)) — fragments,
+// draw-head flags, and depth keys bit-for-bit. The engine receives already
+// _prepare-faces'd prims and clips without re-preparing; the pure comparator
+// runs _clip-lines (which prepares internally) then the identical keys+sort.
+#let full-gate(prims, cam) = assert.eq(
+  engine-sort(_prepare-faces(prims, cam), cam),
+  sort-prims(_clip-lines(prims, cam), cam),
+)
 
-// The documented 4-prim scene (test-render.typ) + its shuffle, exact depths.
+// The documented 5-prim scene (test-render.typ) + its shuffle. Under cam0 the
+// near sphere occludes the lines that stack behind it, so both paths clip
+// identically — the gate has teeth on the clip stage, not just the sort.
 #let cam0 = camera(azimuth: 0deg, elevation: 0deg)
 #let ps = (
   edge((0, -1, -1), (0, -1, 1)),
@@ -25,21 +28,39 @@
   sphere((0, 5, 0), 1),
   label((0, 0, 0), [L]),
 )
-#gate(ps, cam0)
-#gate(ps.rev(), cam0)
+#full-gate(ps, cam0)                                 // the Task-2 scenes still hold
+#full-gate(ps.rev(), cam0)
 
-// Generic camera: the engine consumes the SAME cos/sin values Typst computed,
-// so depth keys are bit-identical, not merely close.
-#gate(ps, camera(azimuth: 25deg, elevation: 15deg))
-#gate(ps, camera(azimuth: -73deg, elevation: 41deg))
+// Generic cameras: the engine consumes the SAME cos/sin values Typst computed,
+// so depth keys and cut points are bit-identical, not merely close.
+#full-gate(ps, camera(azimuth: 25deg, elevation: 15deg))
+#full-gate(ps, camera(azimuth: -73deg, elevation: 41deg))
 
 // Perspective and 2d cameras.
-#gate(ps, camera(azimuth: 25deg, elevation: 15deg, mode: "perspective", distance: 30.0))
-#gate(((sphere((0, 0), 1), seg((1, 1), (2, 2)), label((0, 3), [x]))), camera-2d())
+#full-gate(ps, camera(azimuth: 25deg, elevation: 15deg, mode: "perspective", distance: 30.0))
+#full-gate(((sphere((0, 0), 1), seg((1, 1), (2, 2)), label((0, 3), [x]))), camera-2d())
 
 // Meshes: _prepare-faces explodes + culls Typst-side; the engine keys the
 // resulting faces by centroid exactly like sort-prims.
 #let mesh-scene = (uv-sphere((0, 0, 0), 1, segments: 6, rings: 3), sphere((0, 4, 0), 0.5))
-#gate(mesh-scene, camera(azimuth: 25deg, elevation: 15deg))
+#full-gate(mesh-scene, camera(azimuth: 25deg, elevation: 15deg))
+
+// Fragment-cutting scenes (the reason the naive ordering gate is ill-defined):
+// segments/edges/arrows that pass behind or through spheres and faces, plus an
+// opaque face (hides) and a translucent face (cuts only). Covers ortho +
+// perspective; the engine's produced fragments must equal the pure path's
+// element-for-element, bit-identically.
+#let cutting = (
+  sphere((0, 0, 0), 1), sphere((2.5, 1, 0.5), 0.7),
+  seg((-2, 0, 0), (4, 0, 0)),
+  arrow((-2, 0.4, 0.8), (4, 0.4, 0.8)),
+  edge((-2, -0.5, -0.5), (4, 1.5, 0.5)),
+  face(((1, -1, -1.2), (3, -1, -1.2), (3, 2, -1.2), (1, 2, -1.2)), fill-opacity: 0%),
+  face(((-1, 0.5, -1), (1.5, 0.5, -1), (0.2, 0.5, 1.5))),  // translucent: cuts only
+)
+#full-gate(cutting, cam0)
+#full-gate(cutting, camera(azimuth: 25deg, elevation: 15deg))
+#full-gate(cutting, camera(azimuth: 25deg, elevation: 15deg, mode: "perspective", distance: 20.0))
+#full-gate(mesh-scene + (seg((-2, 0, 0), (2, 0, 0)),), camera(azimuth: 25deg, elevation: 15deg))
 
 Engine sort OK

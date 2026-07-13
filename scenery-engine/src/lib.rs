@@ -2,6 +2,7 @@
 use wasm_minimal_protocol::*;
 
 pub mod camera;
+pub mod clip;
 pub mod pipeline;
 pub mod schema;
 
@@ -48,7 +49,27 @@ mod tests {
         let req = serde_json_like_cbor(); // helper below builds CBOR bytes via ciborium::Value
         let out = sort_scene(&req).expect("stub must decode the full schema");
         let recs: Vec<ciborium::Value> = ciborium::from_reader(&out[..]).unwrap();
-        assert_eq!(recs.len(), 6);
+        // With clipping active (Task 3) the translucent face splits the arrow at
+        // its projected edge, so the six input prims yield seven records; every
+        // source index 0..=5 is still represented.
+        assert_eq!(recs.len(), 7);
+        let indices: Vec<i128> = recs
+            .iter()
+            .map(|r| match r {
+                ciborium::Value::Map(m) => m
+                    .iter()
+                    .find(|(k, _)| matches!(k, ciborium::Value::Text(t) if t == "i"))
+                    .and_then(|(_, v)| match v {
+                        ciborium::Value::Integer(n) => Some((*n).into()),
+                        _ => None,
+                    })
+                    .expect("record has an integer `i`"),
+                _ => panic!("record must be a map"),
+            })
+            .collect();
+        for i in 0..=5i128 {
+            assert!(indices.contains(&i), "source prim {i} must appear in the output");
+        }
     }
 
     #[test]
