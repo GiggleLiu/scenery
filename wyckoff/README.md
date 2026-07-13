@@ -190,6 +190,22 @@ scenes without intersecting translucent faces; the accelerator is for large
 structures (hundreds to thousands of atoms) and for correct layering of
 interpenetrating translucent polyhedra.
 
+**Benchmark (issue #32).** `examples/benchmark.typ` renders a 1000-atom NaCl
+block — a 5×5×5 conventional-cell rock-salt slab imported as a molecule-mode
+`.xyz` (`examples/data/nacl-1000.xyz`), so bond detection runs on the full graph
+(~2700 Na–Cl bonds). Wall-clock compile times (typst 0.14.2, Apple M2, macOS 14.6):
+
+| Path | Command | Time |
+| --- | --- | --- |
+| Accelerator | `typst compile --root wyckoff --input engine=wasm  examples/benchmark.typ …` | **8.2 s** |
+| Pure Typst  | `typst compile --root wyckoff --input engine=typst examples/benchmark.typ …` | 90.0 s |
+
+The accelerator is ~11× faster here and stays well within the documented 120 s
+budget; both paths render pixel-identically (the `test-equiv` gate proves it on
+smaller scenes). The example defaults to `engine: "wasm"` so `make examples` /
+`make images` and CI stay fast; the pure-Typst reference above is compiled
+manually with `--input engine=typst`.
+
 ## Prototypes
 
 Each prototype is a one-liner returning a `structure` value; lattice parameters are in Å.
