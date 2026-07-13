@@ -8,7 +8,7 @@
 use crate::bsp::{self, FaceFrag};
 use crate::clip::{clip_lines, FragGeom};
 use crate::cull;
-use crate::schema::{OutRec, Prim, Request};
+use crate::schema::{DepthKey, OutRec, Prim, Request};
 
 /// Midpoint of two points — mirror of `render.typ:70` `_mid`:
 /// `vscale(vadd(a, b), 0.5)`, i.e. `(a + b) * 0.5` component-wise.
@@ -43,6 +43,51 @@ fn depth_point(p: &Prim) -> [f64; 3] {
         Prim::Arrow { a, b } => mid(*a, *b),
         Prim::Face { pts, .. } => centroid(pts),
         Prim::Label { p } => *p, // unreachable: labels handled before this
+    }
+}
+
+fn support_points(p: &Prim) -> Vec<[f64; 3]> {
+    match p {
+        Prim::Sphere { c, .. } => vec![*c],
+        Prim::Seg { a, b, .. } | Prim::Edge { a, b } | Prim::Arrow { a, b } => vec![*a, *b],
+        Prim::Face { pts, .. } => pts.clone(),
+        Prim::Label { p } => vec![*p],
+    }
+}
+
+fn points_depth(
+    pts: &[[f64; 3]],
+    key: DepthKey,
+    cam: &crate::schema::Camera,
+) -> Result<f64, String> {
+    match key {
+        DepthKey::Center => Ok(cam.project(centroid(pts))?.depth),
+        DepthKey::Back | DepthKey::Front => {
+            let mut depths = pts.iter().map(|p| cam.project(*p).map(|q| q.depth));
+            let first = depths.next().ok_or_else(|| {
+                "scenery-engine: cannot depth-sort a primitive with no support points".to_string()
+            })??;
+            depths.try_fold(first, |acc, d| {
+                let d = d?;
+                Ok(match key {
+                    DepthKey::Back => acc.min(d),
+                    DepthKey::Front => acc.max(d),
+                    DepthKey::Center => unreachable!(),
+                })
+            })
+        }
+    }
+}
+
+fn primitive_depth(
+    p: &Prim,
+    key: DepthKey,
+    cam: &crate::schema::Camera,
+) -> Result<f64, String> {
+    match key {
+        // Preserve the historical operation order exactly on the default path.
+        DepthKey::Center => Ok(cam.project(depth_point(p))?.depth),
+        DepthKey::Back | DepthKey::Front => points_depth(&support_points(p), key, cam),
     }
 }
 
@@ -101,6 +146,9 @@ pub fn run(req: &Request) -> Result<Vec<OutRec>, String> {
     };
 
     let frags = clip_lines(prims, cam)?;
+    let depth_key = |i: usize| {
+        req.depth_keys.get(orig[i]).copied().unwrap_or_default()
+    };
 
     // BSP (issue #33): before depth ordering, split INTERSECTING translucent
     // faces so overlapping polyhedra layer correctly. Gated by `req.bsp`; opaque
@@ -127,7 +175,7 @@ pub fn run(req: &Request) -> Result<Vec<OutRec>, String> {
                     // each keyed on its OWN centroid. Only genuinely-split pieces
                     // carry `pts` (so unsplit faces reassemble bit-identically).
                     for piece in pieces {
-                        let d = cam.project(centroid(&piece.pts))?.depth;
+                        let d = points_depth(&piece.pts, depth_key(i), cam)?;
                         if !d.is_finite() {
                             return Err(format!(
                                 "scenery-engine: non-finite depth for primitive {i}"
@@ -140,7 +188,7 @@ pub fn run(req: &Request) -> Result<Vec<OutRec>, String> {
                     let p = &prims[i];
                     let d = match p {
                         Prim::Label { .. } => 1e9,
-                        _ => cam.project(depth_point(p))?.depth,
+                        _ => primitive_depth(p, depth_key(i), cam)?,
                     };
                     if !d.is_finite() {
                         return Err(format!("scenery-engine: non-finite depth for primitive {i}"));
@@ -151,7 +199,10 @@ pub fn run(req: &Request) -> Result<Vec<OutRec>, String> {
             FragGeom::Line { a, b, head } => {
                 // A fragment's depth key is its own midpoint (mirror of
                 // `_depth-point` on the lerp'd seg/edge/arrow fragment).
-                let d = cam.project(mid(*a, *b))?.depth;
+                let d = match depth_key(i) {
+                    DepthKey::Center => cam.project(mid(*a, *b))?.depth,
+                    key => points_depth(&[*a, *b], key, cam)?,
+                };
                 if !d.is_finite() {
                     return Err(format!("scenery-engine: non-finite depth for primitive {i}"));
                 }

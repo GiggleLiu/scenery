@@ -47,6 +47,7 @@
     bsp: bsp,
     cull: cull,
     prims: prepared.map(p => _ser-prim(p, theme)),
+    depth-keys: prepared.map(p => p.at("depth-key", default: "center")),
   ))
   let out = cbor(_engine.sort_scene(req))
   out.map(rec => {

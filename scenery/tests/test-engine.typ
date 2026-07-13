@@ -36,6 +36,14 @@
 #full-gate(ps, camera(azimuth: 25deg, elevation: 15deg))
 #full-gate(ps, camera(azimuth: -73deg, elevation: 41deg))
 
+// Non-default primitive depth keys cross the plugin boundary and remain
+// structurally identical to the pure sorter.
+#let keyed = (
+  sphere((0, 0, 0), 1),
+  face(((-1, -2, -1), (1, 2, -1), (0, 2, 1)), depth-key: "back"),
+)
+#full-gate(keyed, cam0)
+
 // Perspective and 2d cameras.
 #full-gate(ps, camera(azimuth: 25deg, elevation: 15deg, mode: "perspective", distance: 30.0))
 #full-gate(((sphere((0, 0), 1), seg((1, 1), (2, 2)), label((0, 3), [x]))), camera-2d())

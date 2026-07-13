@@ -82,6 +82,32 @@
   else { p.center } // unreachable: labels/meshes handled before this
 }
 
+// Geometry support points used by the opt-in back/front depth policies.
+#let _depth-support(p) = {
+  let k = p.kind
+  if k == "sphere" { (p.center,) }
+  else if k == "seg" or k == "edge" { (p.a, p.b) }
+  else if k == "arrow" { (p.from, p.to) }
+  else if k == "face" { p.pts }
+  else { (p.at,) }
+}
+
+// Scalar painter key for one already-exploded primitive. `center` is the
+// historical centre/midpoint/centroid rule; back/front anchor at the farthest
+// or nearest support point when intersecting geometry needs a conservative
+// draw order (notably coordination faces meeting opaque ligand spheres).
+#let _primitive-depth(p, camera) = {
+  let key = p.at("depth-key", default: "center")
+  assert(
+    key in ("center", "back", "front"),
+    message: "depth-key must be \"center\", \"back\", or \"front\"; got " + repr(key),
+  )
+  if p.kind == "label" { return 1e9 }
+  if key == "center" { return project(camera, _depth-point(p)).depth }
+  let depths = _depth-support(p).map(q => project(camera, q).depth)
+  if key == "back" { calc.min(..depths) } else { calc.max(..depths) }
+}
+
 /// Explodes any `mesh` primitive into one `face` primitive per mesh face,
 /// carrying the mesh's styling hooks. Non-mesh primitives pass through. This
 /// lets a mesh's near and far faces sort independently in `sort-prims`.
@@ -486,9 +512,11 @@
 
 /// Depth-sorts scene primitives back-to-front for painter's-algorithm drawing.
 ///
-/// Pure — no cetz. Each primitive gets a scalar depth key from `camera`:
-/// spheres use their centre, seg/edge/arrow their midpoint, faces their
-/// centroid, and labels a huge constant so they always paint last (on top).
+/// Pure — no cetz. By default each primitive gets a scalar depth key from
+/// `camera`: spheres use their centre, seg/edge/arrow their midpoint, faces
+/// their centroid, and labels a huge constant so they always paint last (on
+/// top). A primitive can opt into `depth-key: "back"` or `"front"` to use its
+/// farthest or nearest support point instead.
 /// Meshes are first exploded into per-face `face` primitives, each keyed by its
 /// own centroid, so a single mesh's faces sort independently. Depth grows toward
 /// the viewer, so ascending order is far-to-near.
@@ -498,10 +526,7 @@
 /// -> array
 #let sort-prims(prims, camera) = {
   let keyed = _explode(prims).map(p => {
-    let depth = if p.kind == "label" { 1e9 } else {
-      project(camera, _depth-point(p)).depth
-    }
-    (..p, depth: depth)
+    (..p, depth: _primitive-depth(p, camera))
   })
   keyed.sorted(key: p => p.depth)
 }

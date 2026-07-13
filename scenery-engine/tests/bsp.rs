@@ -29,7 +29,7 @@ fn cam30() -> Camera {
 }
 
 fn req(camera: Camera, bsp: bool, prims: Vec<Prim>) -> Request {
-    Request { camera, bsp, cull: None, prims }
+    Request { camera, bsp, cull: None, prims, depth_keys: vec![] }
 }
 
 fn pts_of(p: &Prim) -> &[[f64; 3]] {
