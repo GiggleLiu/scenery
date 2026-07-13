@@ -16,7 +16,8 @@ Programmatic 3D (and 2D) scenes for [Typst](https://typst.app) — the missing 3
 <td align="center"><a href="examples/hero.typ"><img src="images/hero.png" width="380"></a><br>Composite hero scene — axes triad, legend, colorbar</td>
 </tr>
 <tr>
-<td align="center" colspan="2"><a href="examples/visibility.typ"><img src="images/visibility.png" width="520"></a><br>Visibility regression — an arrow correctly clipped by an opaque plane and sphere</td>
+<td align="center"><a href="examples/visibility.typ"><img src="images/visibility.png" width="380"></a><br>Visibility regression — an arrow correctly clipped by an opaque plane and sphere</td>
+<td align="center"><a href="examples/c60.typ"><img src="images/c60.png" width="380"></a><br>Idealized C<sub>60</sub> fullerene — 60 atoms and 90 bonds generated in Typst</td>
 </tr>
 </table>
 
