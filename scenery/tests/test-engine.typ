@@ -72,4 +72,31 @@
 #render-scene(_sc, _cam)
 #render-scene(_sc, _cam, engine: "wasm")
 
+// ============ BSP (issue #33) ============
+// Intersecting translucent faces are split before ordering (level (c) of the
+// gate: structural asserts + reviewed example, never pixel-diffed vs pure).
+#let vq1 = face(((-1.5, -1, 0), (1.5, -1, 0), (1.5, 1, 0), (-1.5, 1, 0)), color: rgb("#4c72b0"))
+#let vq2 = face(((-1.5, 0, -1), (1.5, 0, -1), (1.5, 0, 1), (-1.5, 0, 1)), color: rgb("#dd8452"))
+#let bsp-cam = camera(azimuth: 0deg, elevation: 30deg)
+#let split = engine-sort(_prepare-faces((vq1, vq2), bsp-cam), bsp-cam)
+#assert.eq(split.len(), 4, message: "two crossing translucent quads split into four fragments")
+#assert(split.all(p => p.kind == "face" and p.pts.len() >= 3))
+// styling rides through reassembly onto every fragment
+#assert.eq(split.map(p => p.color).dedup().len(), 2)
+
+// NEGATIVE CONTROL: non-intersecting translucent faces — BSP output is exactly
+// the pure pipeline (no spurious splits; also enforced at pixel level by
+// test-equiv scene 2 on every run).
+#let vq2-apart = face(((-1.5, 2.5, -1), (1.5, 2.5, -1), (1.5, 2.5, 1), (-1.5, 2.5, 1)), color: rgb("#dd8452"))
+#assert.eq(
+  engine-sort(_prepare-faces((vq1, vq2-apart), bsp-cam), bsp-cam),
+  sort-prims(_clip-lines((vq1, vq2-apart), bsp-cam), bsp-cam),
+)
+
+// bsp: false reproduces the plain painter's sort even on the crossing scene.
+#assert.eq(
+  engine-sort(_prepare-faces((vq1, vq2), bsp-cam), bsp-cam, bsp: false),
+  sort-prims(_clip-lines((vq1, vq2), bsp-cam), bsp-cam),
+)
+
 Engine sort OK

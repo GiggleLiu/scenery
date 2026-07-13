@@ -16,13 +16,13 @@ use crate::schema::{Camera, Prim};
 // --- minimal 3-vector helpers (mirror of `scenery/src/linalg.typ`) -----------
 
 /// `vsub` (linalg.typ:14): component-wise `a - b`.
-fn vsub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+pub(crate) fn vsub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
     [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
 }
 
 /// `vdot` (linalg.typ:26): `sum(a_i * b_i)`. The `.sum()` folds left from the
 /// first product, i.e. `((a0*b0) + a1*b1) + a2*b2`.
-fn vdot(a: [f64; 3], b: [f64; 3]) -> f64 {
+pub(crate) fn vdot(a: [f64; 3], b: [f64; 3]) -> f64 {
     a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 }
 
@@ -37,14 +37,14 @@ fn vcross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
 }
 
 /// `vlen` (linalg.typ:41): `sqrt(vdot(a, a))` (sqrt is exactly rounded).
-fn vlen(a: [f64; 3]) -> f64 {
+pub(crate) fn vlen(a: [f64; 3]) -> f64 {
     vdot(a, a).sqrt()
 }
 
 /// `_lerp-point` (render.typ:293) via `lerp` (linalg.typ:59):
 /// `vadd(vscale(a, 1 - t), vscale(b, t))` = `a_i*(1 - t) + b_i*t` per component,
 /// same order (scale-then-add). IEEE-exact at t=0 and t=1.
-fn lerp_point(a: [f64; 3], b: [f64; 3], t: f64) -> [f64; 3] {
+pub(crate) fn lerp_point(a: [f64; 3], b: [f64; 3], t: f64) -> [f64; 3] {
     [
         a[0] * (1.0 - t) + b[0] * t,
         a[1] * (1.0 - t) + b[1] * t,
@@ -212,12 +212,12 @@ fn line_sphere_occlusion(pa: &Proj, pb: &Proj, sp: &ProjSphere) -> (Vec<(f64, f6
 // --- polygon / face occluder -------------------------------------------------
 
 /// `_cross2` (render.typ:295): 2-D cross product `a.0*b.1 - a.1*b.0`.
-fn cross2(a: (f64, f64), b: (f64, f64)) -> f64 {
+pub(crate) fn cross2(a: (f64, f64), b: (f64, f64)) -> f64 {
     a.0 * b.1 - a.1 * b.0
 }
 
 /// `_point-in-polygon` (render.typ:297-312): even-odd ray-cast in screen space.
-fn point_in_polygon(q: (f64, f64), pts: &[(f64, f64)]) -> bool {
+pub(crate) fn point_in_polygon(q: (f64, f64), pts: &[(f64, f64)]) -> bool {
     let mut inside = false;
     let mut j = pts.len() - 1;
     for i in 0..pts.len() {
@@ -241,7 +241,7 @@ fn point_in_polygon(q: (f64, f64), pts: &[(f64, f64)]) -> bool {
 /// brief, the mesh-center reorientation (render.typ:137-140) is intentionally NOT
 /// mirrored: the flag never crosses the boundary, and every plane-side use below
 /// is orientation-invariant (numerator and denominator flip together).
-fn face_normal(pts: &[[f64; 3]]) -> Option<[f64; 3]> {
+pub(crate) fn face_normal(pts: &[[f64; 3]]) -> Option<[f64; 3]> {
     if pts.len() < 3 {
         return None;
     }

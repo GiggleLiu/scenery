@@ -5,6 +5,7 @@
 //! `_prepare-faces` output (meshes exploded, culling applied) on the Typst side,
 //! so this module never sees a mesh: it clips lines, then keys each resulting
 //! fragment by a single 3-point's camera depth.
+use crate::bsp::{self, FaceFrag};
 use crate::clip::{clip_lines, FragGeom};
 use crate::schema::{OutRec, Prim, Request};
 
@@ -73,29 +74,63 @@ fn sort_key(d: f64) -> f64 {
 pub fn run(req: &Request) -> Result<Vec<OutRec>, String> {
     let cam = &req.camera;
     let frags = clip_lines(&req.prims, cam)?;
+
+    // BSP (issue #33): before depth ordering, split INTERSECTING translucent
+    // faces so overlapping polyhedra layer correctly. Gated by `req.bsp`; opaque
+    // and non-intersecting faces are never touched. `face_pieces[i]` holds the
+    // resulting polygons for candidate translucent face `i` (a single unsplit
+    // piece for isolated faces — bit-identical to the plain path), and `None`
+    // for every non-candidate prim (spheres, lines, labels, opaque faces), which
+    // pass through exactly as before.
+    let mut face_pieces: Vec<Option<Vec<FaceFrag>>> = (0..req.prims.len()).map(|_| None).collect();
+    if req.bsp {
+        let split = bsp::split_translucent(bsp::collect_candidates(&req.prims));
+        for f in split {
+            face_pieces[f.i].get_or_insert_with(Vec::new).push(f);
+        }
+    }
+
     let mut keyed: Vec<OutRec> = Vec::with_capacity(frags.len());
     for frag in &frags {
         let i = frag.i;
-        let (d, a, b, head) = match &frag.prim {
+        match &frag.prim {
             FragGeom::PassThrough => {
-                let p = &req.prims[i];
-                let d = match p {
-                    Prim::Label { .. } => 1e9,
-                    _ => cam.project(depth_point(p))?.depth,
-                };
-                (d, None, None, None)
+                if let Some(pieces) = &face_pieces[i] {
+                    // A BSP candidate translucent face: emit one record per piece,
+                    // each keyed on its OWN centroid. Only genuinely-split pieces
+                    // carry `pts` (so unsplit faces reassemble bit-identically).
+                    for piece in pieces {
+                        let d = cam.project(centroid(&piece.pts))?.depth;
+                        if !d.is_finite() {
+                            return Err(format!(
+                                "scenery-engine: non-finite depth for primitive {i}"
+                            ));
+                        }
+                        let pts = if piece.split { Some(piece.pts.clone()) } else { None };
+                        keyed.push(OutRec { i, d, a: None, b: None, head: None, pts });
+                    }
+                } else {
+                    let p = &req.prims[i];
+                    let d = match p {
+                        Prim::Label { .. } => 1e9,
+                        _ => cam.project(depth_point(p))?.depth,
+                    };
+                    if !d.is_finite() {
+                        return Err(format!("scenery-engine: non-finite depth for primitive {i}"));
+                    }
+                    keyed.push(OutRec { i, d, a: None, b: None, head: None, pts: None });
+                }
             }
             FragGeom::Line { a, b, head } => {
                 // A fragment's depth key is its own midpoint (mirror of
                 // `_depth-point` on the lerp'd seg/edge/arrow fragment).
                 let d = cam.project(mid(*a, *b))?.depth;
-                (d, Some(*a), Some(*b), *head)
+                if !d.is_finite() {
+                    return Err(format!("scenery-engine: non-finite depth for primitive {i}"));
+                }
+                keyed.push(OutRec { i, d, a: Some(*a), b: Some(*b), head: *head, pts: None });
             }
-        };
-        if !d.is_finite() {
-            return Err(format!("scenery-engine: non-finite depth for primitive {i}"));
         }
-        keyed.push(OutRec { i, d, a, b, head, pts: None });
     }
     keyed.sort_by(|x, y| sort_key(x.d).total_cmp(&sort_key(y.d))); // stable, mirrors Typst .sorted(key:)
     Ok(keyed)
