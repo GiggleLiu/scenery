@@ -257,9 +257,9 @@ render-scene(
 = Primitives <sec-prims>
 
 scenery has seven primitive kinds. Each is a plain constructor returning a tagged
-dictionary. The optional `name:` is structural; other named arguments (`color`,
-`w`, `head`, `fill-opacity`, ...) are styling hooks stored verbatim on the
-primitive (see @sec-style).
+dictionary. The optional `name:` and `depth-key:` are structural; other named
+arguments (`color`, `w`, `head`, `fill-opacity`, ...) are styling hooks stored
+verbatim on the primitive (see @sec-style).
 
 #table(
   columns: (auto, 1fr),
@@ -274,6 +274,13 @@ primitive (see @sec-style).
   [`mesh(vertices, faces)`], [Indexed polygon mesh; each face depth-sorts on its own.],
   [`label(at, body)`], [Text anchored at a 3D point, painted on top.],
 )
+
+The default `depth-key: "center"` sorts spheres by centre, lines by midpoint and
+faces by centroid. For intersecting geometry, `"back"` and `"front"` instead use
+the farthest or nearest support point. Exact shared support points still tie and
+retain input order. A coordination face can combine `depth-key: "back"` with a
+small backward offset, as Wyckoff does, so an atom paints over the corresponding
+vertex without forcing every sphere into a global foreground layer.
 
 One scene exercising all seven at once --- a translucent ground `face` with
 wireframe `edge` rims, two shaded `sphere`s joined by a `seg`, an `arrow` normal
@@ -713,7 +720,7 @@ name (@sec-prims explains why not `*`).
   [`seg(a, b, name:, ..style)`], [Thick round-capped segment; width `w` in scene units.],
   [`edge(a, b, name:, ..style)`], [Thin wireframe edge; absolute stroke `width`.],
   [`arrow(from, to, name:, ..style)`], [Arrow with a scaled head (`head`, `w`).],
-  [`face(pts, name:, ..style)`], [Planar polygon; `fill-opacity` and optional `cull`.],
+  [`face(pts, name:, ..style)`], [Planar polygon; `fill-opacity`, optional `cull`, and `depth-key`.],
   [`mesh(vertices, faces, name:, ..style)`], [Adaptive culling; `cull` and `hidden-stroke` hooks.],
   [`label(at, text, name:, ..style)`], [Text at a 3D point; `text-anchor` controls alignment.],
   [`build-scene(..prims)`], [Flattens primitives/groups and validates object names.],

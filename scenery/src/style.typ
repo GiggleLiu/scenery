@@ -71,7 +71,7 @@
 #let _STRUCT = (
   "kind", "name", "anchor", "center", "r", "a", "b", "from", "to", "pts",
   "vertices", "faces", "at", "text", "depth", "mesh-face", "mesh-center",
-  "rear-face", "draw-head",
+  "rear-face", "draw-head", "depth-key",
 )
 
 /// The styling hooks on a primitive: its named fields minus structural geometry.

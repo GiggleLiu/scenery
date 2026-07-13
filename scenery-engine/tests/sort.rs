@@ -10,7 +10,7 @@ fn cam0() -> Camera {
     Camera::Ortho { cos_az: 1.0, sin_az: 0.0, cos_el: 1.0, sin_el: 0.0 }
 }
 fn req(camera: Camera, prims: Vec<Prim>) -> Request {
-    Request { camera, bsp: true, cull: None, prims }
+    Request { camera, bsp: true, cull: None, prims, depth_keys: vec![] }
 }
 
 #[test]
@@ -78,6 +78,20 @@ fn stable_sort_preserves_input_order_on_ties() {
     let out = pipeline::run(&req(cam0(), prims)).unwrap();
     assert_eq!(out.iter().map(|r| r.i).collect::<Vec<_>>(), vec![0, 1]);
     assert_eq!(out.iter().map(|r| r.d).collect::<Vec<_>>(), vec![5.0, 5.0]);
+}
+
+#[test]
+fn support_point_depth_keys_bracket_centroid() {
+    let prims = vec![Prim::Face {
+        pts: vec![[-1.0, -2.0, -1.0], [1.0, 2.0, -1.0], [0.0, 2.0, 1.0]],
+        opaque: false,
+    }];
+    let mut back = req(cam0(), prims.clone());
+    back.depth_keys = vec![DepthKey::Back];
+    let mut front = req(cam0(), prims);
+    front.depth_keys = vec![DepthKey::Front];
+    assert_eq!(pipeline::run(&back).unwrap()[0].d, -2.0);
+    assert_eq!(pipeline::run(&front).unwrap()[0].d, 2.0);
 }
 
 #[test]

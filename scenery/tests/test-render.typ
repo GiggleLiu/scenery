@@ -49,6 +49,29 @@
     + repr(sort-prims(shuffled.prims, cam0).map(p => p.kind)),
 )
 
+// --- selectable depth key for intersecting primitives ----------------------
+// A coordination face can overlap an opaque ligand sphere. Its centroid can be
+// nearer than the sphere even though one vertex extends behind it, causing the
+// whole translucent triangle to overpaint the atom. `back` anchors the face at
+// its farthest support point; `front` provides the dual policy. The default
+// remains the historical centroid key.
+#let shared-sphere = sphere((0, 0, 0), 1)
+#let crossing-default = face(((-1, -2, -1), (1, 2, -1), (0, 2, 1)))
+#let crossing-back = face(crossing-default.pts, depth-key: "back")
+#let crossing-front = face(crossing-default.pts, depth-key: "front")
+#assert.eq(sort-prims((shared-sphere, crossing-default), cam0).map(p => p.kind), ("sphere", "face"))
+#assert.eq(sort-prims((shared-sphere, crossing-back), cam0).map(p => p.kind), ("face", "sphere"))
+#assert.eq(sort-prims((shared-sphere, crossing-front), cam0).map(p => p.kind), ("sphere", "face"))
+#assert.eq(sort-prims((crossing-back,), cam0).first().depth, -2)
+#assert.eq(sort-prims((crossing-front,), cam0).first().depth, 2)
+
+// Exact shared support points still tie: stable input order decides which one
+// paints last. Callers that need a guaranteed order at a shared vertex must add
+// a small depth offset (the Wyckoff polyhedron builder does this).
+#let tied-face = face(((0, 0, 0), (1, 2, -1), (0, 2, 1)), depth-key: "back")
+#assert.eq(sort-prims((shared-sphere, tied-face), cam0).map(p => p.kind), ("sphere", "face"))
+#assert.eq(sort-prims((tied-face, shared-sphere), cam0).map(p => p.kind), ("face", "sphere"))
+
 // --- labels always paint last (on top) ---------------------------------------
 // A label keeps the +1e9 depth key even against a very near sphere.
 #let lsc = build-scene(sphere((0, 100, 0), 1), label((0, 0, 0), [L]))

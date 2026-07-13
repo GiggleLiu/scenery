@@ -146,8 +146,12 @@
       let col = color-of(shown.at(poly.center).element)
       for f in poly.faces {
         // shade: false — the old renderer never lit faces (flat translucent fill).
+        // depth-key: "back" anchors the face at its farthest vertex. Combined
+        // with face-offset above, each corresponding ligand sphere is strictly
+        // nearer and paints after the face instead of being cut by a
+        // centroid-sorted triangular wedge.
         prims.push(scenery.face(f.map(p => scenery.vadd(p, face-offset)),
-          color: col, shade: false))
+          color: col, shade: false, depth-key: "back"))
       }
     }
   }

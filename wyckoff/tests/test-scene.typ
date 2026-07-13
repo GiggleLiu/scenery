@@ -52,4 +52,6 @@
   colors: (Ti: custom-blue,))
 #assert(sc2.prims.filter(p => p.kind == "face").len() == 8)
 #assert(sc2.prims.filter(p => p.kind == "face").all(p => p.color == custom-blue))
+#assert(sc2.prims.filter(p => p.kind == "face").all(p => p.depth-key == "back"),
+  message: "coordination faces must sort from their back support point")
 Scene OK

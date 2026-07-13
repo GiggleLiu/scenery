@@ -17,6 +17,8 @@
   edge((-2, -0.5, -0.5), (4, 1.5, 0.5)),
   face(((1, -1, -1.2), (3, -1, -1.2), (3, 2, -1.2), (1, 2, -1.2)),
     color: rgb("#55a868"), fill-opacity: 0%),
+  face(((-1, -2, -1), (1, 2, -1), (0, 2, 1)),
+    color: rgb("#8172b3"), depth-key: "back"),
   label((0, 1.6, 1.2), [cut]),
 )
 #render-scene(sc1, cam, engine: eng, width: 7cm)

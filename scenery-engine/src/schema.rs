@@ -34,12 +34,23 @@ pub enum Prim {
     #[serde(rename = "label")]  Label { p: [f64; 3] },
 }
 
+#[derive(Deserialize, Debug, Clone, Copy, Default)]
+#[serde(rename_all = "kebab-case")]
+pub enum DepthKey {
+    #[default]
+    Center,
+    Back,
+    Front,
+}
+
 #[derive(Deserialize, Debug)]
 pub struct Request {
     pub camera: Camera,
     pub bsp: bool,
     pub cull: Option<Cull>,
     pub prims: Vec<Prim>,
+    #[serde(default, rename = "depth-keys")]
+    pub depth_keys: Vec<DepthKey>,
 }
 
 /// One draw record; the response is `Vec<OutRec>` in back-to-front draw order.

@@ -112,7 +112,9 @@ fn pipeline_culls_first_and_preserves_original_indices() {
         Prim::Seg { a: [0.0, 1.0, -0.2], b: [0.0, 1.0, 0.2], w: 0.16 }, // 1 hidden → dropped
         Prim::Edge { a: [5.0, 0.0, -1.0], b: [5.0, 0.0, 1.0] },         // 2 free → kept
     ];
-    let req = Request { camera: cam0(), bsp: true, cull: Some(wy_cull()), prims };
+    let req = Request {
+        camera: cam0(), bsp: true, cull: Some(wy_cull()), prims, depth_keys: vec![],
+    };
     let out = pipeline::run(&req).unwrap();
     let idx: Vec<usize> = out.iter().map(|r| r.i).collect();
     assert!(!idx.contains(&1), "hidden seg 1 must be culled: {idx:?}");
