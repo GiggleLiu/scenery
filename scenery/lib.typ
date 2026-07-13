@@ -18,8 +18,12 @@
 // Depth-sort (pure) and the cetz painter's-algorithm backend.
 #import "src/render.typ": sort-prims, scene-group, render-scene
 
-// WASM geometry accelerator (opt-in; pure Typst is the default and fallback).
-#import "src/engine.typ": engine-sort, engine-version
+// The WASM geometry accelerator (`engine.typ`) is intentionally NOT re-exported
+// here: `engine.typ` calls `plugin(..)` at module-eval time, so importing it
+// would eagerly load the blob and make the pure-Typst default path depend on it.
+// The public accelerator API is the `engine: "wasm"` parameter on `scene-group`/
+// `render-scene`, which `render.typ` wires with an import scoped to that branch.
+// Internals (`engine-sort`/`engine-version`) are reachable via `/src/engine.typ`.
 
 // Annotation furniture: axes triad, legend, colorbar (cetz draw commands).
 #import "src/annotate.typ": axes-triad, legend, colorbar
