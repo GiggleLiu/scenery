@@ -8,3 +8,5 @@ _pkgroot/
 *.pdf
 __pycache__/
 .superpowers/
+.DS_Store
+**/.DS_Store
