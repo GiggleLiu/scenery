@@ -385,7 +385,10 @@ fn spacegroup_number(cif: &Cif) -> Result<Option<i64>, String> {
     }
     if let Some(v) = cif.scalars.get("_symmetry_space_group_name_h-m") {
         let norm: String = v.chars().filter(|c| !c.is_whitespace() && *c != '_' && *c != '\'' && *c != '"').collect();
-        return match SG_SYMBOLS.iter().find(|(s, _)| *s == norm) {
+        // Case-insensitive: real CIFs write H-M symbols in varied case
+        // ('Fm-3m', 'F M -3 M', 'FM-3M'). The 230-symbol table is unique under
+        // ASCII case-folding, so this adds no ambiguity.
+        return match SG_SYMBOLS.iter().find(|(s, _)| s.eq_ignore_ascii_case(&norm)) {
             Some((_, n)) => Ok(Some(*n)),
             None => Err(format!(
                 "unrecognized H-M spacegroup symbol '{}'; add an explicit _space_group_IT_number",

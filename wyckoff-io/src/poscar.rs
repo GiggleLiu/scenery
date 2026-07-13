@@ -37,7 +37,10 @@ pub fn parse(input: &str) -> Result<Record, String> {
     if symbols.is_empty() {
         return Err("POSCAR element-symbols line is empty".into());
     }
-    if symbols[0].parse::<u64>().is_ok() {
+    // A numeric first token (integer OR float, e.g. "4" or "2.0") means the
+    // element-symbols line is absent (VASP 4). f64 catches non-integer counts
+    // that a u64 parse would miss and then mis-read as an element symbol.
+    if symbols[0].parse::<f64>().is_ok() {
         return Err("POSCAR has no element-symbols line (VASP 4 format); insert a VASP 5 \
                     symbols line (e.g. 'Na Cl') before the per-species counts line"
             .into());

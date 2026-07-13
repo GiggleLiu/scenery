@@ -15,7 +15,7 @@ from pathlib import Path
 import numpy as np
 from pyxtal.symmetry import Group
 
-DATA = Path(__file__).resolve().parent.parent / "data"
+DATA = Path(__file__).resolve().parent.parent / "wyckoff" / "data"
 
 def ltype_3d(n):
     if n <= 2: return "triclinic"

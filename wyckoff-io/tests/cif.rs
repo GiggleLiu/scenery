@@ -150,6 +150,14 @@ fn hm_symbol_maps_to_number() {
 }
 
 #[test]
+fn hm_symbol_is_case_insensitive() {
+    // Some CIF exporters upper-case the H-M symbol ('F M -3 M'). The 230-symbol
+    // table is unique under ASCII case-folding, so the lookup is case-insensitive.
+    let src = NACL_SG.replace("_space_group_IT_number 225", "_symmetry_space_group_name_H-M 'F M -3 M'");
+    assert_eq!(cif::parse(&src).unwrap().spacegroup, Some(225));
+}
+
+#[test]
 fn unknown_hm_symbol_is_error_with_advice() {
     let src = NACL_SG.replace("_space_group_IT_number 225", "_symmetry_space_group_name_H-M 'Q z z'");
     let err = cif::parse(&src).unwrap_err();
