@@ -1,6 +1,8 @@
 #[cfg(target_arch = "wasm32")]
 use wasm_minimal_protocol::*;
 
+pub mod camera;
+pub mod pipeline;
 pub mod schema;
 
 #[cfg(target_arch = "wasm32")]
@@ -17,15 +19,13 @@ pub fn echo(input: &[u8]) -> Vec<u8> {
 }
 
 /// Primitives + camera in (CBOR), depth-ordered primitives with depth keys out
-/// (CBOR). Task 1 stub: schema round-trip in input order; Tasks 2-5 fill the
-/// pipeline (cull -> clip -> bsp -> depth keys -> stable sort).
+/// (CBOR). Task 2: depth keys + stable back-to-front sort (mirror of render.typ
+/// `sort-prims`); Tasks 3-5 add cull -> clip -> bsp splitting.
 #[cfg_attr(target_arch = "wasm32", wasm_func)]
 pub fn sort_scene(input: &[u8]) -> Result<Vec<u8>, String> {
     let req: schema::Request =
         ciborium::from_reader(input).map_err(|e| format!("scenery-engine: bad request: {e}"))?;
-    let out: Vec<schema::OutRec> = (0..req.prims.len())
-        .map(|i| schema::OutRec { i, d: 0.0, a: None, b: None, head: None, pts: None })
-        .collect();
+    let out = pipeline::run(&req)?;
     let mut buf = Vec::new();
     ciborium::into_writer(&out, &mut buf)
         .map_err(|e| format!("scenery-engine: encode failed: {e}"))?;
