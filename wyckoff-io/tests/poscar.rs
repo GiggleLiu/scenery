@@ -52,6 +52,16 @@ fn vasp4_without_symbols_is_rejected() {
 }
 
 #[test]
+fn vasp4_float_count_line_is_rejected() {
+    // A numeric line 6 means the element-symbols line is absent (VASP 4). A
+    // non-integer spelling like "2.0" must still be detected (u64 parsing missed
+    // it and mis-read "2.0" as an element symbol).
+    let src = "Cu cell\n1.0\n3.6 0 0\n0 3.6 0\n0 0 3.6\n2.0 2.0\nDirect\n0 0 0\n0.5 0.5 0.5\n";
+    let err = poscar::parse(src).unwrap_err();
+    assert!(err.contains("VASP 4") && err.contains("symbols"), "err was: {}", err);
+}
+
+#[test]
 fn negative_scale_is_rejected() {
     let src = NACL_CART.replace("5.64\n", "-100.0\n");
     let err = poscar::parse(&src).unwrap_err();
