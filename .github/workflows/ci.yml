@@ -22,7 +22,7 @@ jobs:
         if: matrix.package == 'scenery'
         run: make check-links
       - name: Install Rust wasm target
-        if: matrix.package == 'wyckoff'
+        if: matrix.package == 'wyckoff' || matrix.package == 'scenery'
         run: rustup target add wasm32-unknown-unknown
       # Rebuild the plugin fresh (rust-toolchain.toml pins rustc) and run the
       # typst suite against THIS build, so stale or broken Rust source is caught
@@ -37,6 +37,15 @@ jobs:
       - name: Run wyckoff-io parser tests
         if: matrix.package == 'wyckoff'
         run: cargo test --manifest-path wyckoff-io/Cargo.toml
+      # Same functional-gate pattern as wyckoff-io (see the note above): rebuild
+      # the engine fresh and run scenery's typst suite (test-engine.typ + the
+      # equivalence gates) against this build.
+      - name: Build scenery-engine plugin
+        if: matrix.package == 'scenery'
+        run: make -C scenery plugin
+      - name: Run scenery-engine tests
+        if: matrix.package == 'scenery'
+        run: cargo test --manifest-path scenery-engine/Cargo.toml
       - name: Run tests
         run: make -C ${{ matrix.package }} test
       - name: Compile examples
