@@ -31,11 +31,17 @@
 
 /// Build a structure value. Exactly one of spacegroup:, layergroup:, or an
 /// explicit lattice: array (with atoms:) must be supplied.
-#let structure(spacegroup: none, layergroup: none, lattice: (:), sites: (), atoms: ()) = {
+#let structure(spacegroup: none, layergroup: none, lattice: (:), sites: (), atoms: (), bonds: none) = {
   let explicit = type(lattice) == array
   let molecule = (not explicit) and spacegroup == none and layergroup == none and atoms.len() > 0
   let n-modes = (int(spacegroup != none) + int(layergroup != none) + int(explicit) + int(molecule))
   assert(n-modes == 1, message: "wyckoff: give exactly one of spacegroup:, layergroup:, an explicit lattice: array with atoms:, or atoms: alone (molecule mode)")
+
+  // Precomputed bonds are a molecule-only optimization (the supercell caveat:
+  // periodic bond indices would reference boundary/supercell images). They must
+  // index the molecule's own atoms, as (i, j) int pairs with i < j.
+  assert(bonds == none or molecule,
+    message: "wyckoff: bonds: is only accepted in molecule mode (atoms: alone)")
 
   if molecule {
     let ident = ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0))
@@ -45,7 +51,15 @@
       let c = cart.map(float)
       (element: el, frac: c, cart: c, site: i)
     })
-    return (kind: "molecule", group: none, vectors: ident, periodic: (false, false, false), atoms: alist)
+    if bonds != none {
+      for b in bonds {
+        assert(b.len() == 2 and type(b.at(0)) == int and type(b.at(1)) == int,
+          message: "wyckoff: each bond must be an (i, j) integer pair")
+        assert(0 <= b.at(0) and b.at(0) < b.at(1) and b.at(1) < alist.len(),
+          message: "wyckoff: bond index out of range or not i < j: " + repr(b))
+      }
+    }
+    return (kind: "molecule", group: none, vectors: ident, periodic: (false, false, false), atoms: alist, bonds: bonds)
   }
 
   if explicit {

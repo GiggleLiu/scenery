@@ -1,5 +1,6 @@
 tools/.venv/
 _pkgroot/
+/target/
 **/tests/*.pdf
 **/tests/*.png
 **/examples/*.pdf

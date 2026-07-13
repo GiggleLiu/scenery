@@ -11,7 +11,7 @@ from pathlib import Path
 import numpy as np
 from pymatgen.core import Lattice, Structure
 
-FIX = Path(__file__).resolve().parent.parent / "tests" / "fixtures"
+FIX = Path(__file__).resolve().parent.parent / "wyckoff" / "tests" / "fixtures"
 FIX.mkdir(parents=True, exist_ok=True)
 
 # Origin-choice overrides: pymatgen's SpaceGroup(sg) setting differs from the
@@ -105,6 +105,24 @@ def expand_layer(gnum, rep):
             pts.append(q)
     return pts
 
+def write_benchmark_xyz():
+    """1000-atom NaCl block (5x5x5 conventional cells) as a molecule-mode .xyz
+    benchmark fixture for the scenery-engine accelerator (issue #32)."""
+    a = 5.64
+    basis = [("Na", (0.0, 0.0, 0.0)), ("Na", (0.5, 0.5, 0.0)), ("Na", (0.5, 0.0, 0.5)),
+             ("Na", (0.0, 0.5, 0.5)), ("Cl", (0.5, 0.0, 0.0)), ("Cl", (0.0, 0.5, 0.0)),
+             ("Cl", (0.0, 0.0, 0.5)), ("Cl", (0.5, 0.5, 0.5))]
+    lines = ["1000", "NaCl 5x5x5 conventional-cell block (generated benchmark fixture)"]
+    for i in range(5):
+        for j in range(5):
+            for k in range(5):
+                for el, (x, y, z) in basis:
+                    lines.append(f"{el} {(i + x) * a:.3f} {(j + y) * a:.3f} {(k + z) * a:.3f}")
+    out = Path(__file__).resolve().parent.parent / "wyckoff" / "examples" / "data" / "nacl-1000.xyz"
+    out.write_text("\n".join(lines) + "\n")
+    print(f"wrote {out} (1000 atoms)")
+
+
 for name, lg, lat, sites, total in CASES_LAYER:
     atoms, out_sites = [], []
     for el, letter, p in sites:
@@ -120,3 +138,5 @@ for name, lg, lat, sites, total in CASES_LAYER:
                "sites": out_sites, "expected": {"natoms": total, "atoms": atoms}}
     (FIX / f"{name}.json").write_text(json.dumps(fixture, indent=1))
     print(f"{name}: lg {lg}, {total} atoms, letters {[s['wyckoff'] for s in out_sites]}")
+
+write_benchmark_xyz()

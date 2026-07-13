@@ -1,4 +1,4 @@
-.PHONY: all test examples data fixtures images clean venv plugin
+.PHONY: all test test-equiv examples data fixtures images clean venv plugin
 
 TYPST = typst compile --root .
 TESTS := $(wildcard tests/test-*.typ)
@@ -15,7 +15,19 @@ test:
 	  echo "== $$t"; \
 	  $(TYPST) $$t $${t%.typ}.pdf || exit 1; \
 	done
+	@$(MAKE) test-equiv
 	@echo "All tests passed!"
+
+# Accelerator pixel-equivalence gate (issue #32): the same wyckoff figure through
+# engine="typst" and engine="wasm" must render byte-identically — this exercises
+# the occlusion-cull mirror + detect_bonds through the accelerator on a periodic
+# scene, a molecule, and a perspective supercell. tests/*.png is gitignored, so
+# the outputs never dirty the tree.
+test-equiv:
+	$(TYPST) --format png --ppi 144 --input engine=typst tests/equiv/equiv-figure.typ tests/equiv-figure-typst.png
+	$(TYPST) --format png --ppi 144 --input engine=wasm  tests/equiv/equiv-figure.typ tests/equiv-figure-wasm.png
+	cmp tests/equiv-figure-typst.png tests/equiv-figure-wasm.png
+	@echo "wyckoff engine=wasm and engine=typst render pixel-identically"
 
 examples:
 	@for f in $(EXAMPLES); do \
@@ -31,9 +43,9 @@ PLUGIN_CRATE = ../wyckoff-io
 WASM_OUT = plugin/wyckoff_io.wasm
 
 plugin:
-	cargo build --manifest-path $(PLUGIN_CRATE)/Cargo.toml --release --target wasm32-unknown-unknown
+	cargo build --manifest-path ../Cargo.toml -p wyckoff-io --release --target wasm32-unknown-unknown
 	@mkdir -p plugin
-	cp $(PLUGIN_CRATE)/target/wasm32-unknown-unknown/release/wyckoff_io.wasm $(WASM_OUT)
+	cp ../target/wasm32-unknown-unknown/release/wyckoff_io.wasm $(WASM_OUT)
 	@if command -v wasm-opt >/dev/null 2>&1; then \
 	  echo "wasm-opt -Oz"; wasm-opt -Oz $(WASM_OUT) -o $(WASM_OUT); \
 	else echo "wasm-opt not found, skipping (optional)"; fi

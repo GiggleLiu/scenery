@@ -658,12 +658,35 @@
   legend: none,
   colorbar: none,
   register-anchors: true,
+  engine: "typst",
+  engine-cull: none,
 ) = {
+  assert(
+    engine in ("typst", "wasm"),
+    message: "scenery: engine must be \"typst\" or \"wasm\", got " + repr(engine),
+  )
   let scene = resolve-scene(scene, camera)
   // All geometry resolved to plain data before the wildcard import, so the loop
   // below cannot be tripped by cetz re-exporting `project`/`scale`.
-  let records = sort-prims(_clip-lines(scene.prims, camera, theme: theme), camera)
-    .map(p => _record(camera, unit, theme, p))
+  //
+  // `engine: "wasm"` (opt-in) delegates only the depth-sort + line-clipping to
+  // the scenery-engine WASM plugin; the `import` is scoped to this branch so the
+  // default pure-Typst path never loads the blob. Styling stays Typst-side:
+  // `engine-sort` returns draw-ordered geometry records keyed back to the
+  // original styled primitives, so `_record` reassembles colour/gradient/theme
+  // by primitive exactly as the pure path does.
+  let ordered = if engine == "wasm" {
+    import "engine.typ": engine-sort
+    engine-sort(
+      _prepare-faces(scene.prims, camera, theme: theme),
+      camera,
+      theme: theme,
+      cull: engine-cull,
+    )
+  } else {
+    sort-prims(_clip-lines(scene.prims, camera, theme: theme), camera)
+  }
+  let records = ordered.map(p => _record(camera, unit, theme, p))
   // Annotation placement, in canvas coords (screen projection times `unit`).
   let sb = _projected-screen-bbox(camera, scene.bbox)
   let (x0, y0, x1, y1) = (sb.at(0) * unit, sb.at(1) * unit, sb.at(2) * unit, sb.at(3) * unit)
@@ -753,6 +776,8 @@
   axes: none,
   legend: none,
   colorbar: none,
+  engine: "typst",
+  engine-cull: none,
 ) = {
   let scene = resolve-scene(scene, camera)
   let w = _projected-width(camera, scene.bbox)
@@ -766,5 +791,7 @@
     legend: legend,
     colorbar: colorbar,
     register-anchors: false,
+    engine: engine,
+    engine-cull: engine-cull,
   ))
 }
