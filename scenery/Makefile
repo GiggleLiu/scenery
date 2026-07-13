@@ -1,4 +1,4 @@
-.PHONY: all test examples images manual plugin clean
+.PHONY: all test test-equiv examples images manual plugin clean
 
 TYPST = typst compile --root .
 TESTS := $(wildcard tests/test-*.typ)
@@ -15,7 +15,7 @@ manual: manual.pdf
 manual.pdf: manual.typ lib.typ src/*.typ
 	$(TYPST) manual.typ manual.pdf
 
-test: manual
+test: manual test-equiv
 	@for t in $(TESTS); do \
 	  echo "== $$t"; \
 	  $(TYPST) $$t $${t%.typ}.pdf || exit 1; \
@@ -29,6 +29,15 @@ test: manual
 	  echo "$$out" | grep -F -- "$$expected" >/dev/null || { echo "$$out"; exit 1; }; \
 	done
 	@echo "All tests passed!"
+
+# Accelerator pixel-equivalence gate (issue #32): the same fixture through the
+# pure-Typst and wasm paths must render byte-identically. tests/*.png is
+# gitignored, so the outputs never dirty the tree.
+test-equiv:
+	$(TYPST) --format png --ppi 144 --input engine=typst tests/equiv/equiv-scene.typ tests/equiv-typst.png
+	$(TYPST) --format png --ppi 144 --input engine=wasm  tests/equiv/equiv-scene.typ tests/equiv-wasm.png
+	cmp tests/equiv-typst.png tests/equiv-wasm.png
+	@echo "engine=wasm and engine=typst render pixel-identically"
 
 examples:
 	@for f in $(EXAMPLES); do \

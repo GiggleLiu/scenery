@@ -2,7 +2,7 @@
 #import "/src/scene.typ": sphere, seg, edge, arrow, face, label, build-scene, mesh
 #import "/src/shape.typ": uv-sphere
 #import "/src/camera.typ": camera, camera-2d
-#import "/src/render.typ": sort-prims, _prepare-faces, _clip-lines
+#import "/src/render.typ": sort-prims, _prepare-faces, _clip-lines, render-scene
 
 #assert.eq(engine-version(), "scenery-engine 0.1.0")
 
@@ -62,5 +62,14 @@
 #full-gate(cutting, camera(azimuth: 25deg, elevation: 15deg))
 #full-gate(cutting, camera(azimuth: 25deg, elevation: 15deg, mode: "perspective", distance: 20.0))
 #full-gate(mesh-scene + (seg((-2, 0, 0), (2, 0, 0)),), camera(azimuth: 25deg, elevation: 15deg))
+
+// ============ OPT-IN NEGATIVE CONTROL (public entry, both engines compile) ===
+// The default path is untouched: engine: "typst" is the pre-Stage-4 code branch
+// by construction. Pin that the public entry compiles both ways on the same
+// scene; the Makefile `test-equiv` pixel gate carries the byte-equality burden.
+#let _sc = build-scene(sphere((0, 0, 0), 1), seg((-2, 0, 0), (2, 0, 0)), label((0, 2, 0), [x]))
+#let _cam = camera(azimuth: 25deg, elevation: 15deg)
+#render-scene(_sc, _cam)
+#render-scene(_sc, _cam, engine: "wasm")
 
 Engine sort OK
