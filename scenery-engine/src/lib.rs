@@ -4,6 +4,7 @@ use wasm_minimal_protocol::*;
 pub mod bsp;
 pub mod camera;
 pub mod clip;
+pub mod cull;
 pub mod pipeline;
 pub mod schema;
 

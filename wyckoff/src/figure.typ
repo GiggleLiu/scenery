@@ -15,6 +15,14 @@
 #import "@preview/cetz:0.5.2"
 #import "data.typ": element-info
 #import "geometry.typ": display-atoms, cell-edges, find-bonds, find-polyhedra
+#import "io.typ": _io
+
+// The verbatim `occlude` slacks (see below), forwarded to the engine's cull
+// mirror as NUMBERS on the `engine: "wasm"` path so the wasm output matches the
+// pure path's coverage suppression exactly (issue #32). Kept in sync with the
+// `2 * sp.r` / `sp.depth + sp.r` / `0.45 * b.w` / `b.depth + 1.0` constants in
+// `occlude`.
+#let _wy-cull = (seg-r-slack: 2.0, point-r-slack: 1.0, seg-w-frac: 0.45, seg-d-slack: 1.0)
 
 /// Build a pure-data scene of scenery primitives (3D, unprojected) plus the
 /// screen-space bbox and element list wyckoff's renderer needs. Primitives are
@@ -32,6 +40,7 @@
   bond-width: auto,     // per-mode default: 0.25 (licorice), 0.16 otherwise
   labels: false,
   colors: (:),
+  engine: "typst",
 ) = {
   assert(mode in ("ball-and-stick", "space-filling", "cpk", "licorice"),
     message: "wyckoff: mode must be \"ball-and-stick\", \"space-filling\" (alias \"cpk\") or \"licorice\", got " + repr(mode))
@@ -93,9 +102,19 @@
   // find-bonds, but O(N) in Rust): use them verbatim. `display-atoms` emits a
   // molecule's atoms in order with no supercell images, so the indices line up.
   // A user-supplied `bonds:` rules array still overrides via find-bonds.
+  // The engine="wasm" path detects auto bonds through the wyckoff-io accelerator
+  // (`detect_bonds`, O(N) in Rust) instead of Typst `find-bonds`; the two use the
+  // SAME rule and radii, so the resulting bond set — and hence the whole scene —
+  // is identical (pinned by tests/test-bonds.typ). Precomputed bonds and a
+  // user-supplied rules array still take their existing branches.
   let pre = structure.at("bonds", default: none)
   let blist = if mode == "space-filling" or bonds == none { () }
     else if bonds == auto and pre != none { pre.map(b => (i: b.at(0), j: b.at(1))) }
+    else if bonds == auto and engine == "wasm" {
+      json(_io.detect_bonds(bytes(json.encode(
+        shown.map(a => (element: a.element, cart: a.cart))))))
+        .map(b => (i: b.at(0), j: b.at(1)))
+    }
     else { find-bonds(shown, bonds) }
   for b in blist {
     let (pa, pb) = (shown.at(b.i), shown.at(b.j))
@@ -255,9 +274,13 @@
 /// Raw cetz draw commands for `scene` at canvas scale `scale` (for composition
 /// inside a user `cetz.canvas`). Suppression is applied first; drawing goes
 /// through scenery's `scene-group`.
-#let draw-scene(scene, scale: 1.0) = {
-  let filtered = occlude(scene.prims, scene.camera)
-  scenery.scene-group(scenery.build-scene(..filtered), scene.camera, unit: scale)
+#let draw-scene(scene, scale: 1.0, engine: "typst") = {
+  // engine="wasm": hand ALL prims to the accelerator, which mirrors `occlude` via
+  // its cull stage (policy passed as `_wy-cull` numbers); engine="typst": run the
+  // pure-Typst `occlude` pre-filter here. Both drive scenery's `scene-group`.
+  let prims = if engine == "wasm" { scene.prims } else { occlude(scene.prims, scene.camera) }
+  scenery.scene-group(scenery.build-scene(..prims), scene.camera, unit: scale,
+    engine: engine, engine-cull: if engine == "wasm" { _wy-cull } else { none })
 }
 
 /// Render a scene to content: a cetz canvas scaled so the scene's (screen-space)
@@ -265,14 +288,18 @@
 /// right; `axes-info: (vectors, view, n-axes?)` adds an a/b/c triad bottom-left.
 /// Placement mirrors the old `render.typ` exactly (wyckoff's bbox, not scenery's
 /// 3D-AABB projection), so output is pixel-identical.
-#let render(scene, width: 8cm, legend: true, axes-info: none) = {
+#let render(scene, width: 8cm, legend: true, axes-info: none, engine: "typst") = {
   let (x0, y0, x1, y1) = scene.bbox
   let s = (width / 1cm) / (x1 - x0)
   let cam = scene.camera
-  let filtered = occlude(scene.prims, cam)
-  let sub = scenery.build-scene(..filtered)
+  // See draw-scene: wasm mirrors `occlude` in the engine cull stage; typst runs
+  // the pure pre-filter. The engine args equal scene-group's defaults on the
+  // typst path, so the default output is byte-identical.
+  let prims = if engine == "wasm" { scene.prims } else { occlude(scene.prims, cam) }
+  let sub = scenery.build-scene(..prims)
   cetz.canvas(length: 1cm, {
-    scenery.scene-group(sub, cam, unit: s)
+    scenery.scene-group(sub, cam, unit: s,
+      engine: engine, engine-cull: if engine == "wasm" { _wy-cull } else { none })
     if legend {
       let legend-colors = scene.at(
         "element-colors",
