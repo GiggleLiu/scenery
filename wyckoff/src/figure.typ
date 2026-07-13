@@ -89,7 +89,14 @@
   }
 
   // Space-filling shows the raw packing: skip the bond search entirely.
-  let blist = if mode == "space-filling" or bonds == none { () } else { find-bonds(shown, bonds) }
+  // In auto mode, a molecule may carry parser-precomputed bonds (same rule as
+  // find-bonds, but O(N) in Rust): use them verbatim. `display-atoms` emits a
+  // molecule's atoms in order with no supercell images, so the indices line up.
+  // A user-supplied `bonds:` rules array still overrides via find-bonds.
+  let pre = structure.at("bonds", default: none)
+  let blist = if mode == "space-filling" or bonds == none { () }
+    else if bonds == auto and pre != none { pre.map(b => (i: b.at(0), j: b.at(1))) }
+    else { find-bonds(shown, bonds) }
   for b in blist {
     let (pa, pb) = (shown.at(b.i), shown.at(b.j))
     let dir = scenery.vnorm(scenery.vsub(pb.cart, pa.cart))

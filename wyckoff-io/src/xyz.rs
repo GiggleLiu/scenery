@@ -1,3 +1,4 @@
+use crate::bonds::find_bonds;
 use crate::geom::{cart_to_frac, read3};
 use crate::record::{Atom, Meta, Record};
 
@@ -28,12 +29,26 @@ pub fn parse(input: &str) -> Result<Record, String> {
     }
 
     let source_format = if lattice.is_some() { "extxyz" } else { "xyz" };
+    // Precompute bonds only for MOLECULE records (no lattice): their bond indices
+    // reference the exact atom set the Typst molecule renderer displays. Periodic
+    // (extended-xyz) records keep bonds=None -- their indices would be against the
+    // unit-cell atoms, not the boundary/supercell images Typst shows (the supercell
+    // caveat), so bonds are auto-detected at render time instead.
+    let bonds = match &lattice {
+        None => Some(find_bonds(
+            &atoms
+                .iter()
+                .map(|a| (a.element.clone(), a.cart))
+                .collect::<Vec<_>>(),
+        )),
+        Some(_) => None,
+    };
     Ok(Record {
         lattice,
         atoms,
         spacegroup: None,
         asym_unit: None,
-        bonds: None,
+        bonds,
         meta: Meta { source_format: source_format.into(), n_atoms: n },
     })
 }
