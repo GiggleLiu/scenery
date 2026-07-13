@@ -56,6 +56,9 @@ examples: pkgroot
 # drift from what the code actually renders (see tools/gen_site_assets.py).
 site-assets: pkgroot
 	python3 tools/gen_site_assets.py
+	@# The interactive demo runs the SAME engine wasm Typst uses, straight in
+	@# the browser — keep site/ in sync with the committed plugin.
+	cp scenery/plugin/scenery_engine.wasm site/assets/scenery_engine.wasm
 
 # Preview the showcase site locally: http://localhost:$(PORT)/
 serve:
