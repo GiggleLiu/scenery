@@ -20,7 +20,9 @@
 /// branch reads `a.cart`; extended-xyz atoms carry `frac`, read by the periodic branch.
 #let record-to-structure(record) = {
   if record.lattice == none {
-    structure(atoms: record.atoms.map(a => (a.element, a.cart)))
+    // Molecule: the plugin precomputes bonds (indices into this atom set) with
+    // the same rule Typst's find-bonds uses, so carry them onto the structure.
+    structure(atoms: record.atoms.map(a => (a.element, a.cart)), bonds: record.bonds)
   } else if record.spacegroup != none {
     let group = group-data("3d", record.spacegroup)
     let expanded = expand-general(
