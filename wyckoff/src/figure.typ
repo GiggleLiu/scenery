@@ -87,9 +87,11 @@
 
   // Spheres, then labels, then bond segs, then polyhedra faces, then cell edges:
   // this push order is the stable-sort tie-break the old renderer relied on.
-  for a in shown {
+  // Each atom sphere is NAMED (by display index) so bond segs can reference it
+  // through scenery's connection abstraction (surface auto-attach, see below).
+  for (idx, a) in shown.enumerate() {
     prims.push(scenery.sphere(a.cart, rdisp(a.element),
-      color: color-of(a.element), element: a.element))
+      color: color-of(a.element), element: a.element, name: "atom-" + str(idx)))
   }
   if labels {
     for a in shown {
@@ -118,23 +120,24 @@
     else { find-bonds(shown, bonds) }
   for b in blist {
     let (pa, pb) = (shown.at(b.i), shown.at(b.j))
-    let dir = scenery.vnorm(scenery.vsub(pb.cart, pa.cart))
-    // Ball-and-stick trims each bond end to 90% of the sphere radius (today's
-    // rule); licorice sticks run atom-center to atom-center — their caps have
-    // the same radius as the stick, so the joint is hidden by the cap sphere.
-    let trim(el) = if mode == "licorice" { 0.0 } else { 0.9 * rdisp(el) }
-    let a0 = scenery.vadd(pa.cart, scenery.vscale(dir, trim(pa.element)))
-    let b0 = scenery.vsub(pb.cart, scenery.vscale(dir, trim(pb.element)))
+    // Bond endpoints go through scenery's connection abstraction: an endpoint
+    // that references a NAMED sphere is auto-attached to the sphere SURFACE
+    // (`center + r * normalize(other - center)`) by `resolve-scene` below, so
+    // bonds emerge exactly at the atom surface — no hand-rolled trim.
+    // Licorice is the intentional exception: its sticks run atom-center to
+    // atom-center (concrete endpoints) because the caps have the same radius
+    // as the stick, so the round cap hides the joint.
+    let (ea, eb) = if mode == "licorice" { (pa.cart, pb.cart) }
+      else { ("atom-" + str(b.i), "atom-" + str(b.j)) }
     if bond-color == auto {
-      let mid = scenery.lerp(a0, b0, 0.5)
-      // Two-tone bond: one seg per half, coloured by its own atom.
-      for (p, q, el) in ((a0, mid, pa.element), (mid, b0, pb.element)) {
-        prims.push(scenery.seg(p, q,
-          color: color-of(el).darken(10%), w: bond-width))
-      }
+      // Two-tone bond: mark the full-length seg with its two atom colours; it
+      // is split into per-atom halves AFTER resolution, at the midpoint of the
+      // attached (surface) endpoints.
+      prims.push(scenery.seg(ea, eb, w: bond-width, wy-two-tone: (
+        color-of(pa.element).darken(10%), color-of(pb.element).darken(10%))))
     } else {
       // Single-color opt-out: one seg per bond, verbatim color.
-      prims.push(scenery.seg(a0, b0, color: bond-color, w: bond-width))
+      prims.push(scenery.seg(ea, eb, color: bond-color, w: bond-width))
     }
   }
 
@@ -156,6 +159,25 @@
         let q = scenery.lerp(ea, eb, (t + 1) / 8)
         prims.push(scenery.edge(p, q, color: luma(120), width: 0.7pt))
       }
+    }
+  }
+
+  // Resolve named references NOW: `resolve-scene` attaches every anchor-ref
+  // bond endpoint to its atom sphere's surface, yielding concrete coordinates
+  // for the bbox below and the `occlude` pre-filter (both need real points;
+  // `scene-group` re-resolves later, a no-op on concrete prims). Then split
+  // each marked two-tone bond into per-atom halves at the midpoint of the
+  // ATTACHED endpoints.
+  let resolved = scenery.resolve-scene(scenery.build-scene(..prims), cam).prims
+  prims = ()
+  for p in resolved {
+    if p.kind == "seg" and "wy-two-tone" in p {
+      let mid = scenery.lerp(p.a, p.b, 0.5)
+      let (ca, cb) = p.wy-two-tone
+      prims.push(scenery.seg(p.a, mid, color: ca, w: p.w))
+      prims.push(scenery.seg(mid, p.b, color: cb, w: p.w))
+    } else {
+      prims.push(p)
     }
   }
 
