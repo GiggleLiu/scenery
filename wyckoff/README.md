@@ -180,6 +180,16 @@ The default remains orthographic and is pixel-identical to earlier versions.
 
 <img src="images/perspective.png" width="760">
 
+### Large scenes: the WASM accelerator
+
+`crystal()`, `crystal-group()` and `molecule()` take `engine: "wasm"` to run
+bond detection, projection, occlusion culling, depth sorting, and translucent
+BSP splitting through the bundled `scenery-engine` WebAssembly plugin. The
+default (`engine: "typst"`) is pure Typst and renders pixel-identically on
+scenes without intersecting translucent faces; the accelerator is for large
+structures (hundreds to thousands of atoms) and for correct layering of
+interpenetrating translucent polyhedra.
+
 ## Prototypes
 
 Each prototype is a one-liner returning a `structure` value; lattice parameters are in Å.

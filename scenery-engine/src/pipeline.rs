@@ -7,6 +7,7 @@
 //! fragment by a single 3-point's camera depth.
 use crate::bsp::{self, FaceFrag};
 use crate::clip::{clip_lines, FragGeom};
+use crate::cull;
 use crate::schema::{OutRec, Prim, Request};
 
 /// Midpoint of two points — mirror of `render.typ:70` `_mid`:
@@ -73,7 +74,33 @@ fn sort_key(d: f64) -> f64 {
 /// `-0.0`/`+0.0` tie-break normalized to match Typst — see `sort_key`).
 pub fn run(req: &Request) -> Result<Vec<OutRec>, String> {
     let cam = &req.camera;
-    let frags = clip_lines(&req.prims, cam)?;
+
+    // Coverage-suppression cull (issue #32) runs FIRST — the mirror of wyckoff's
+    // `occlude`, gated by `req.cull` (host policy as numbers; `None` = no cull).
+    // It drops hidden bond stubs / cell edges BEFORE clip+sort see them, exactly
+    // as the pure path filters prims before `scene-group`. Spheres and faces
+    // always survive, so the downstream occluders are unchanged either way. When
+    // culling, `orig[k]` maps the kept prim at filtered position `k` back to its
+    // ORIGINAL index, which every emitted record's `i` is remapped to at the end
+    // (so the Typst side reassembles styling against the prims it sent).
+    let culled: Vec<Prim>;
+    let (prims, orig): (&[Prim], Vec<usize>) = if let Some(c) = &req.cull {
+        let keep = cull::cull_mask(&req.prims, cam, c)?;
+        let mut ps = Vec::new();
+        let mut idx = Vec::new();
+        for (i, p) in req.prims.iter().enumerate() {
+            if keep[i] {
+                ps.push(p.clone());
+                idx.push(i);
+            }
+        }
+        culled = ps;
+        (&culled[..], idx)
+    } else {
+        (&req.prims[..], (0..req.prims.len()).collect())
+    };
+
+    let frags = clip_lines(prims, cam)?;
 
     // BSP (issue #33): before depth ordering, split INTERSECTING translucent
     // faces so overlapping polyhedra layer correctly. Gated by `req.bsp`; opaque
@@ -82,9 +109,9 @@ pub fn run(req: &Request) -> Result<Vec<OutRec>, String> {
     // piece for isolated faces — bit-identical to the plain path), and `None`
     // for every non-candidate prim (spheres, lines, labels, opaque faces), which
     // pass through exactly as before.
-    let mut face_pieces: Vec<Option<Vec<FaceFrag>>> = (0..req.prims.len()).map(|_| None).collect();
+    let mut face_pieces: Vec<Option<Vec<FaceFrag>>> = (0..prims.len()).map(|_| None).collect();
     if req.bsp {
-        let split = bsp::split_translucent(bsp::collect_candidates(&req.prims));
+        let split = bsp::split_translucent(bsp::collect_candidates(prims));
         for f in split {
             face_pieces[f.i].get_or_insert_with(Vec::new).push(f);
         }
@@ -110,7 +137,7 @@ pub fn run(req: &Request) -> Result<Vec<OutRec>, String> {
                         keyed.push(OutRec { i, d, a: None, b: None, head: None, pts });
                     }
                 } else {
-                    let p = &req.prims[i];
+                    let p = &prims[i];
                     let d = match p {
                         Prim::Label { .. } => 1e9,
                         _ => cam.project(depth_point(p))?.depth,
@@ -133,5 +160,10 @@ pub fn run(req: &Request) -> Result<Vec<OutRec>, String> {
         }
     }
     keyed.sort_by(|x, y| sort_key(x.d).total_cmp(&sort_key(y.d))); // stable, mirrors Typst .sorted(key:)
+    // Remap filtered positions back to original prim indices (no-op without cull,
+    // where `orig` is the identity 0..n).
+    for rec in &mut keyed {
+        rec.i = orig[rec.i];
+    }
     Ok(keyed)
 }

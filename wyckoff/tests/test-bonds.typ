@@ -32,4 +32,8 @@
 #let hand = structure(atoms: water.atoms.map(a => (a.element, a.cart)))
 #assert.eq(build-scene(water).prims, build-scene(hand).prims)
 
+// 5. engine="wasm" bond path: identical scene to the pure path (the render-time
+// detect_bonds accelerator equivalence lifted to the figure level).
+#assert.eq(build-scene(nacl, engine: "wasm").prims, build-scene(nacl).prims)
+
 Bonds OK
