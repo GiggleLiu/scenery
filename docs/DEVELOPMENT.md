@@ -20,13 +20,14 @@ scenery/            repo root
 │   ├── LICENSE
 │   ├── Makefile
 │   └── tests/
-└── wyckoff/        package: crystal-structure figures
-    ├── typst.toml
-    ├── lib.typ
-    ├── LICENSE
-    ├── Makefile
-    ├── src/  data/  tests/  examples/  images/
-    └── README.md
+├── materia/        package: materials-science figures
+│   ├── typst.toml
+│   ├── lib.typ
+│   ├── LICENSE
+│   ├── Makefile
+│   ├── src/  data/  tests/  examples/  images/
+│   └── README.md
+└── materia-io/     Rust/WASM structure-file parser used by materia
 ```
 
 Packages import their own sources with root-absolute paths (e.g.
@@ -47,7 +48,7 @@ Run from the repo root:
 | `make clean` | Clean each package and remove `_pkgroot/`. |
 
 Each package Makefile also works on its own from inside the package directory
-(`cd wyckoff && make test`).
+(`cd materia && make test`).
 
 ## How `@preview` resolves locally
 
@@ -61,12 +62,12 @@ package directory into place:
 
 ```
 _pkgroot/preview/scenery/0.1.0  ->  ../scenery
-_pkgroot/preview/wyckoff/0.1.0  ->  ../wyckoff
+_pkgroot/preview/materia/0.1.0  ->  ../materia
 ```
 
 The root Makefile exports `TYPST_PACKAGE_PATH=$(CURDIR)/_pkgroot`, and the
 `test` / `examples` targets depend on `pkgroot`, so `@preview/scenery:0.1.0` and
-`@preview/wyckoff:0.1.0` resolve to the working tree with no download.
+`@preview/materia:0.1.0` resolve to the working tree with no download.
 
 To compile a scratch document against the local packages by hand:
 

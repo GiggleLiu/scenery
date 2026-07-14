@@ -1,13 +1,13 @@
 # scenery monorepo — top-level orchestration.
 #
-# Each package (scenery/, wyckoff/) is a self-contained Typst package with its
+# Each package (scenery/, materia/) is a self-contained Typst package with its
 # own Makefile exposing `test` and `examples` targets. This root Makefile fans
 # those out across every package and wires up local `@preview` resolution.
 
 .PHONY: all test examples site-assets serve manual pkgroot plugin clean
 
 # Packages in dependency order (core first, then its consumers).
-PACKAGES := scenery wyckoff brillouin
+PACKAGES := scenery materia
 
 # Local preview server port for `make serve`.
 PORT ?= 8000
@@ -31,10 +31,10 @@ pkgroot:
 check-links:
 	python3 tools/check_links.py
 
-# Build native/WASM plugins. Only wyckoff ships one today; the fan-out builds
+# Build native/WASM plugins. Both packages ship one; the fan-out builds
 # each package's `plugin` target where it exists.
 plugin:
-	@$(MAKE) -C wyckoff plugin
+	@$(MAKE) -C materia plugin
 	@$(MAKE) -C scenery plugin
 	@echo "Plugin(s) built."
 
@@ -43,6 +43,8 @@ test: pkgroot check-links
 	  echo "==> $$pkg: tests"; \
 	  $(MAKE) -C $$pkg test || exit 1; \
 	done
+	@echo "==> materia: external caller path"
+	typst compile --root . integration/test-materia-external.typ integration/test-materia-external.pdf
 	@echo "All package test suites passed!"
 
 examples: pkgroot
@@ -73,4 +75,5 @@ manual: pkgroot
 
 clean:
 	@for pkg in $(PACKAGES); do $(MAKE) -C $$pkg clean; done
+	rm -f integration/*.pdf
 	rm -rf _pkgroot

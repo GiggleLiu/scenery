@@ -102,6 +102,11 @@
 )
 #assert(front.filter(p => p.kind == "edge").len() == 1, message: "foreground line was hidden")
 
+// Edge dash styling reaches the draw record (used by scientific correlation
+// diagrams while keeping the primitive itself renderer-agnostic).
+#let dashed = _record(cam0, 1, default-theme, edge((0, 0, 0), (1, 0, 0), dash: "dashed"))
+#assert.eq(dashed.stroke.dash, "dashed")
+
 // A sloped-depth line can leave the projected disk before it passes behind the
 // sphere. The overlapping foreground piece needs its own depth key; otherwise
 // the distant tail's midpoint would incorrectly place the whole line behind.

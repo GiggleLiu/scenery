@@ -27,36 +27,37 @@ PPI = "144"  # matches each package's `images` Makefile target
 PAGE = '#set page(width: auto, height: auto, margin: 0.4cm)\n'
 
 # One-figure wrappers for the multi-figure import examples. Each mirrors the
-# corresponding figure in wyckoff/examples/import-*.typ.
+# corresponding figure in materia/examples/import-*.typ.
 def fig(imports, body):
-    return ("figure", "wyckoff",
+    return ("figure", "materia",
             f'#import "/lib.typ": {imports}\n{PAGE}{body}\n')
 
 # asset name (site/assets/<name>.png) -> spec
 MANIFEST = {
-    # wyckoff — crystals & molecules (each example sets an auto page, 1 figure)
-    "perovskite":       ("file", "wyckoff", "examples/perovskite.typ", 1),
-    "nacl":             ("file", "wyckoff", "examples/nacl.typ", 1),
-    "mos2":             ("file", "wyckoff", "examples/mos2.typ", 1),
-    "diamond":          ("file", "wyckoff", "examples/diamond.typ", 1),
-    "render-modes":     ("file", "wyckoff", "examples/render-modes.typ", 1),
-    "perspective":      ("file", "wyckoff", "examples/perspective.typ", 1),
+    # materia — real-space structures (each example sets an auto page)
+    "perovskite":       ("file", "materia", "examples/perovskite.typ", 1),
+    "nacl":             ("file", "materia", "examples/nacl.typ", 1),
+    "mos2":             ("file", "materia", "examples/mos2.typ", 1),
+    "diamond":          ("file", "materia", "examples/diamond.typ", 1),
+    "render-modes":     ("file", "materia", "examples/render-modes.typ", 1),
+    "perspective":      ("file", "materia", "examples/perspective.typ", 1),
     # file-import figures (rendered one per asset from a wrapper)
     "import-cif-nacl":  fig("import-cif, crystal",
-                            '#crystal(import-cif("/examples/data/nacl-ops.cif"), width: 5cm)'),
+                            '#crystal(import-cif(path("/examples/data/nacl-ops.cif")), width: 5cm)'),
     "import-poscar-cu": fig("import-poscar, crystal",
-                            '#crystal(import-poscar("/examples/data/cu.poscar"), width: 5cm)'),
+                            '#crystal(import-poscar(path("/examples/data/cu.poscar")), width: 5cm)'),
     "import-xyz-water": fig("import-xyz, molecule",
-                            '#molecule(import-xyz("/examples/data/water.xyz"), width: 5cm)'),
+                            '#molecule(import-xyz(path("/examples/data/water.xyz")), width: 5cm)'),
     "import-extxyz-si": fig("import-xyz, crystal",
-                            '#crystal(import-xyz("/examples/data/si.extxyz"), width: 5cm)'),
+                            '#crystal(import-xyz(path("/examples/data/si.extxyz")), width: 5cm)'),
     # scenery — engine gallery
     "c60":              ("file", "scenery", "examples/c60.typ", 1),
     "scenery-hero":     ("file", "scenery", "examples/hero.typ", 1),
     "solids":           ("file", "scenery", "examples/solids.typ", 1),
-    # brillouin — reciprocal space
-    "bz-band":          ("file", "brillouin", "examples/bz-band.typ", 1),
-    "fcc-bz":           ("file", "brillouin", "examples/fcc-bz.typ", 1),
+    # materia — reciprocal and electronic space
+    "bz-band":          ("file", "materia", "examples/bz-band.typ", 1),
+    "fcc-bz":           ("file", "materia", "examples/fcc-bz.typ", 1),
+    "co-mo":            ("file", "materia", "examples/co-mo.typ", 1),
 }
 
 OUT_DIR = ROOT / "site" / "assets"

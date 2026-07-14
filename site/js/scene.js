@@ -1,5 +1,5 @@
 // The scene the live viewer shows: SrTiO3 perovskite — the same structure as
-// the hero "Plate I", built from the same numbers wyckoff uses:
+// the hero "Plate I", built from the same numbers materia uses:
 //
 //   crystal(prototypes.perovskite("Sr", "Ti", "O", a: 3.905),
 //           bonds: ((elements: ("Ti", "O"), max: 2.2),), polyhedra: ("Ti",),
@@ -7,8 +7,8 @@
 //
 // Space group 221 (Pm-3m): Sr on the corners, Ti at the body centre, O at the
 // face centres — which puts the six oxygens exactly at the vertices of the
-// TiO6 octahedron around Ti. Everything below mirrors wyckoff's ball-and-stick
-// build (wyckoff/src/figure.typ): sphere radius 0.45 x r-atom, bond width
+// TiO6 octahedron around Ti. Everything below mirrors materia's ball-and-stick
+// build: sphere radius 0.45 x r-atom, bond width
 // 0.16, bonds attached at the sphere surfaces and pre-split into two-tone
 // halves at the midpoint, octahedron faces translucent, each cell edge split
 // into 8 sub-edges so the depth sort interleaves them correctly with atoms.
@@ -23,9 +23,9 @@ const H = A / 2;
 // Element palette — identical to the site's plates.
 export const PALETTE = { Sr: "#6485a6", Ti: "#9aa0a6", O: "#cc8963" };
 
-// Ball-and-stick: 0.45 x r-atom (wyckoff/data/elements.json: Sr 2.0, Ti 1.4, O 0.6).
+// Ball-and-stick: 0.45 x r-atom (materia/data/elements.json: Sr 2.0, Ti 1.4, O 0.6).
 const RADII = { Sr: 0.45 * 2.0, Ti: 0.45 * 1.4, O: 0.45 * 0.6 };
-const BOND_W = 0.16; // world-units stroke width, wyckoff's ball-and-stick default
+const BOND_W = 0.16; // world-units stroke width, materia's ball-and-stick default
 
 const sub = (p, q) => [p[0] - q[0], p[1] - q[1], p[2] - q[2]];
 const mid = (p, q) => [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2, (p[2] + q[2]) / 2];
@@ -38,7 +38,7 @@ const norm = (v) => {
 export function buildScene() {
   const prims = [];
   const styles = [];
-  const faces = []; // {i, base} — render.js re-applies wyckoff's depth offset per frame
+  const faces = []; // {i, base} — render.js re-applies materia's depth offset per frame
   const add = (prim, style) => { prims.push(prim); styles.push(style); };
 
   // --- atoms (centred: cell corners at (+-H, +-H, +-H)) ---------------------
@@ -54,7 +54,7 @@ export function buildScene() {
   ];
   for (const c of oSites) atoms.push({ el: "O", c });
 
-  // Push order mirrors wyckoff (spheres, bonds, faces, edges) — the engine's
+  // Push order mirrors materia (spheres, bonds, faces, edges) — the engine's
   // stable sort uses emission order as the tie-break, exactly like Typst.
   for (const a of atoms) {
     add({ k: "sphere", c: a.c, r: RADII[a.el] }, { kind: "atom", color: PALETTE[a.el] });
@@ -81,7 +81,7 @@ export function buildScene() {
             { kind: "poly", color: PALETTE.Ti });
       }
 
-  // --- unit-cell edges, each split into 8 (wyckoff parity) ------------------
+  // --- unit-cell edges, each split into 8 (materia parity) ------------------
   const corner = (m) => [m & 1 ? H : -H, m & 2 ? H : -H, m & 4 ? H : -H];
   for (let m = 0; m < 8; m++)
     for (const bit of [1, 2, 4]) {

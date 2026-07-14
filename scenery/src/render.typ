@@ -1,10 +1,10 @@
 // Painter's-algorithm renderer: depth-sort scene primitives, then paint them
-// back-to-front with cetz. Generalised from the validated `wyckoff/src/render.typ`
+// back-to-front with CeTZ. Generalised from the validated crystal renderer
 // (gradient-shaded sphere balls, translucent faces) with two changes: styling
 // comes from a theme dict instead of hardcoded atom colours, and mesh/`face`
 // polygons are flat-shaded from a single world light direction.
 //
-// Two cetz 0.5.2 gotchas the wyckoff reference documents are honoured here:
+// Two CeTZ 0.5.2 gotchas from that reference renderer are honoured here:
 //   * `import cetz.draw: *` re-exports names like `scale`/`project` that would
 //     shadow parameters and our camera projection. All geometry is therefore
 //     computed in pure helpers BEFORE the wildcard import, and the drawing loop
@@ -22,7 +22,7 @@
 // --- sphere shading ---------------------------------------------------------
 
 /// The body tint of a shaded sphere of base colour `col`: the documented
-/// mid-tone `color.mix((white, 25%), (col, 75%))` (wyckoff parity — issue #8
+/// mid-tone `color.mix((white, 25%), (col, 75%))` (crystal-renderer parity
 /// pixel-compares against it). This is the pure, testable
 /// guard against the `white.mix(..)` mis-weighting (see the module header); it
 /// is the mid stop of `_sphere-gradient`.
@@ -586,7 +586,7 @@
       kind: k,
       a: _screen(camera, unit, p.a),
       b: _screen(camera, unit, p.b),
-      stroke: (paint: st.color, thickness: st.width),
+      stroke: (paint: st.color, thickness: st.width, dash: st.at("dash", default: "solid")),
     )
   } else if k == "arrow" {
     let wsc = project-scale(camera, project(camera, _mid(p.from, p.to)).depth)

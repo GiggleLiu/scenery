@@ -64,4 +64,4 @@ plugin:
 	@ls -l $(WASM_OUT)
 
 clean:
-	rm -f tests/*.pdf examples/*.pdf manual.pdf
+	rm -f tests/*.pdf tests/*.png examples/*.pdf manual.pdf

@@ -2,13 +2,13 @@
 //
 // A figure is a flat array of typed primitives — plain dictionaries tagged by a
 // `kind` field, e.g. `(kind: "sphere", center: (0,0,0), r: 1)`. A later stage
-// projects, depth-sorts and draws them; nothing here touches cetz. This mirrors
-// the validated data model in `wyckoff/src/scene.typ`, generalised to carry raw
+// projects, depth-sorts and draws them; nothing here touches CeTZ. This mirrors
+// the validated crystal-scene data model, generalised to carry raw
 // 3D geometry (unprojected) plus two new kinds, `arrow` and `mesh`.
 //
-// Field-name map (for the wyckoff migration, issue #8): `sphere` keeps `r`;
+// Field-name map from the crystal-scene migration: `sphere` keeps `r`;
 // `seg`/`edge` keep `a`/`b`; `face` keeps `pts`; `label` keeps `at`/`text`.
-// `sphere` uses `center` (spelled out, as in the issue) rather than wyckoff's
+// `sphere` uses `center` (spelled out) rather than the former renderer's
 // terse `c`. Extra named arguments to any constructor are styling hooks (colour,
 // stroke, width, ...) and are stored verbatim on the primitive.
 

@@ -540,18 +540,18 @@ footer { padding: 64px 0 80px; }
       <p class="pitch rise d3">
         Describe a crystal the way crystallographers do — a space group, Wyckoff
         positions, lattice parameters — or point at a real <strong>.xyz&thinsp;/&thinsp;POSCAR&thinsp;/&thinsp;CIF</strong>
-        file. <strong>scenery</strong> expands the symmetry, finds the bonds, and paints a
+        file. <strong>materia</strong> expands the symmetry, finds the bonds, and paints a
         publication-quality 3D figure <strong>entirely inside the Typst compiler</strong>.
         No Python. No raster step. Native vector output.
       </p>
       <div class="cta-row rise d4">
         <a class="btn btn-primary" href="https://github.com/GiggleLiu/scenery">View on GitHub</a>
-        <a class="btn btn-ghost" href="https://typst.app/universe/package/wyckoff">Typst Universe</a>
+        <a class="btn btn-ghost" href="https://typst.app/universe/package/materia">Typst Universe</a>
       </div>
       <div class="hero-code rise d4">
         <div class="code">
           <div class="bar">rocksalt.typ</div>
-          <pre><code><span class="tok-k">#import</span> <span class="tok-s">"@preview/wyckoff:0.1.0"</span>: prototypes, crystal
+          <pre><code><span class="tok-k">#import</span> <span class="tok-s">"@preview/materia:0.1.0"</span>: prototypes, crystal
 
 <span class="tok-k">#</span><span class="tok-f">crystal</span>(prototypes.<span class="tok-f">rocksalt</span>(<span class="tok-s">"Na"</span>, <span class="tok-s">"Cl"</span>, a: <span class="tok-n">5.64</span>), width: <span class="tok-n">8cm</span>)</code></pre>
         </div>
@@ -560,7 +560,7 @@ footer { padding: 64px 0 80px; }
       <div class="stats rise d5">
         <div class="stat"><div class="n">230</div><div class="l">space groups</div></div>
         <div class="stat"><div class="n">80</div><div class="l">layer groups</div></div>
-        <div class="stat"><div class="n">3</div><div class="l">packages</div></div>
+        <div class="stat"><div class="n">2</div><div class="l">packages</div></div>
         <div class="stat"><div class="n">0</div><div class="l">external tools</div></div>
       </div>
     </div>
@@ -570,7 +570,7 @@ footer { padding: 64px 0 80px; }
              alt="Ball-and-stick figure of the SrTiO3 perovskite unit cell: large slate-blue strontium spheres at the corners, a gray titanium sphere at the center inside a translucent TiO6 octahedron with copper-colored oxygen atoms, with a legend and an a/b/c axes triad.">
       </div>
       <figcaption><span class="pl">Plate I</span> — SrTiO<sub>3</sub> perovskite, space group <i>Pm</i>3&#773;<i>m</i>,
-      with TiO<sub>6</sub> coordination octahedra. Drawn by <code>wyckoff</code> from five Wyckoff sites.</figcaption>
+      with TiO<sub>6</sub> coordination octahedra. Drawn by <code>materia</code> from five Wyckoff sites.</figcaption>
     </figure>
   </div>
 </section>
@@ -581,7 +581,7 @@ footer { padding: 64px 0 80px; }
     <span class="tag">New</span>
     <b>File import &amp; molecular rendering</b>
     <span class="muted">— <code style="font-family:var(--mono);font-size:13.5px">.xyz</code> · extended-xyz · POSCAR · CIF importers,
-    a lattice-free <i>molecule mode</i>, CPK &amp; licorice render styles, and a perspective camera.</span>
+    molecule mode, Brillouin zones, band panels, and declarative molecular-orbital diagrams.</span>
   </div>
 </div>
 
@@ -593,8 +593,8 @@ footer { padding: 64px 0 80px; }
       <h2>Point it at the file you already have.</h2>
       <p class="lede">
         Structures rarely start life in a document — they come out of VASP runs, database
-        exports, and geometry optimizers. The bundled <strong>wyckoff-io</strong> parser (Rust, compiled
-        to WASM, shipped inside the package) reads the file and hands wyckoff a clean structure:
+        exports, and geometry optimizers. The bundled <strong>materia-io</strong> parser (Rust, compiled
+        to WASM, shipped inside the package) reads the file and hands materia a clean structure:
         one import call, one render call, done.
       </p>
     </div>
@@ -623,9 +623,9 @@ H  -0.757   0.586   0.000</code></pre>
             <p class="becomes">becomes</p>
             <div class="code">
               <div class="bar">document.typ</div>
-              <pre><code><span class="tok-k">#import</span> <span class="tok-s">"@preview/wyckoff:0.1.0"</span>: import-xyz, molecule
+              <pre><code><span class="tok-k">#import</span> <span class="tok-s">"@preview/materia:0.1.0"</span>: import-xyz, molecule
 
-<span class="tok-k">#</span><span class="tok-f">molecule</span>(<span class="tok-f">import-xyz</span>(<span class="tok-s">"water.xyz"</span>))</code></pre>
+<span class="tok-k">#</span><span class="tok-f">molecule</span>(<span class="tok-f">import-xyz</span>(<span class="tok-f">path</span>(<span class="tok-s">"water.xyz"</span>)))</code></pre>
             </div>
           </div>
           <div class="fig-side">
@@ -668,9 +668,9 @@ Direct
             <p class="becomes">becomes</p>
             <div class="code">
               <div class="bar">document.typ</div>
-              <pre><code><span class="tok-k">#import</span> <span class="tok-s">"@preview/wyckoff:0.1.0"</span>: import-poscar, crystal
+              <pre><code><span class="tok-k">#import</span> <span class="tok-s">"@preview/materia:0.1.0"</span>: import-poscar, crystal
 
-<span class="tok-k">#</span><span class="tok-f">crystal</span>(<span class="tok-f">import-poscar</span>(<span class="tok-s">"POSCAR"</span>))</code></pre>
+<span class="tok-k">#</span><span class="tok-f">crystal</span>(<span class="tok-f">import-poscar</span>(<span class="tok-f">path</span>(<span class="tok-s">"POSCAR"</span>)))</code></pre>
             </div>
           </div>
           <div class="fig-side">
@@ -715,9 +715,9 @@ Cl1 0.5 0.0 0.0</code></pre>
             <p class="becomes">becomes</p>
             <div class="code">
               <div class="bar">document.typ</div>
-              <pre><code><span class="tok-k">#import</span> <span class="tok-s">"@preview/wyckoff:0.1.0"</span>: import-cif, crystal
+              <pre><code><span class="tok-k">#import</span> <span class="tok-s">"@preview/materia:0.1.0"</span>: import-cif, crystal
 
-<span class="tok-k">#</span><span class="tok-f">crystal</span>(<span class="tok-f">import-cif</span>(<span class="tok-s">"nacl.cif"</span>))</code></pre>
+<span class="tok-k">#</span><span class="tok-f">crystal</span>(<span class="tok-f">import-cif</span>(<span class="tok-f">path</span>(<span class="tok-s">"nacl.cif"</span>)))</code></pre>
             </div>
           </div>
           <div class="fig-side">
@@ -728,7 +728,7 @@ Cl1 0.5 0.0 0.0</code></pre>
               </div>
               <figcaption><span class="pl">Fig. 3</span> — an explicit
               <code>_symmetry_equiv_pos_as_xyz</code> loop (the path most database exports take)
-              is applied directly; a bare spacegroup number falls back to wyckoff&rsquo;s own
+              is applied directly; a bare spacegroup number falls back to materia&rsquo;s own
               symmetry tables.</figcaption>
             </figure>
             <p class="io-note">Files the pragmatic subset can&rsquo;t honor — partial occupancy,
@@ -870,7 +870,7 @@ Cl1 0.5 0.0 0.0</code></pre>
           <img src="assets/fcc-bz.png" width="409" height="380" loading="lazy"
                alt="First Brillouin zone of the fcc lattice, a translucent blue truncated octahedron with the high-symmetry k-path Gamma-X-W-K-Gamma-L traced in red and labelled.">
         </div>
-        <figcaption><span class="pl">Plate IX</span> — fcc Brillouin zone with the Setyawan–Curtarolo &Gamma;–X–W–K–&Gamma;–L path (<code>brillouin</code>).</figcaption>
+        <figcaption><span class="pl">Plate IX</span> — fcc Brillouin zone with the Setyawan–Curtarolo &Gamma;–X–W–K–&Gamma;–L path (<code>materia</code>).</figcaption>
       </figure>
       <figure class="fig wide">
         <div class="plate">
@@ -879,12 +879,19 @@ Cl1 0.5 0.0 0.0</code></pre>
         </div>
         <figcaption><span class="pl">Plate X</span> — zone beside a band panel: tight-binding bands along the k-path, ticks placed automatically.</figcaption>
       </figure>
+      <figure class="fig wide">
+        <div class="plate">
+          <img src="assets/co-mo.png" width="833" height="766" loading="lazy"
+               alt="Carbon monoxide molecular-orbital correlation diagram with atomic and molecular columns, electron spin arrows, and dashed correlations.">
+        </div>
+        <figcaption><span class="pl">Plate XI</span> — a declarative CO molecular-orbital diagram with degeneracy, occupation, correlations, and bond order.</figcaption>
+      </figure>
       <figure class="fig">
         <div class="plate">
           <img src="assets/solids.png" width="808" height="377" loading="lazy"
                alt="Row of parametric solids in slate blue: a UV sphere, cylinder, cone, triangular prism, and a convex-hull icosahedron.">
         </div>
-        <figcaption><span class="pl">Plate XI</span> — parametric solids and a convex-hull icosahedron from the shape generators.</figcaption>
+        <figcaption><span class="pl">Plate XII</span> — parametric solids and a convex-hull icosahedron from the shape generators.</figcaption>
       </figure>
     </div>
   </div>
@@ -895,7 +902,7 @@ Cl1 0.5 0.0 0.0</code></pre>
   <div class="wrap">
     <div class="section-head">
       <p class="eyebrow"><span class="no">§ 05 · </span>The family</p>
-      <h2>Three packages, one scene core.</h2>
+      <h2>Two packages, one scene core.</h2>
       <p class="lede">
         Every package speaks the same typed-primitive language and renders through the same
         depth-sorted painter — so figures from different packages share themes, cameras,
@@ -920,9 +927,9 @@ Cl1 0.5 0.0 0.0</code></pre>
   width: <span class="tok-n">5cm</span>)</code></pre></div>
       </article>
       <article class="pkg">
-        <h3>wyckoff <span class="v">0.1.0</span></h3>
-        <p>Materials-Project-style crystal figures from space groups, layer groups and Wyckoff
-        positions — plus molecules and file import. Symmetry tables cross-validated against pymatgen.</p>
+        <h3>materia · real space <span class="v">0.1.0</span></h3>
+        <p>Crystal and molecular figures from space groups, layer groups, Wyckoff positions,
+        or structure files. Symmetry tables are cross-validated against pymatgen.</p>
         <div class="code"><pre><code><span class="tok-c">// Rutile TiO2 from its asymmetric unit</span>
 <span class="tok-k">#</span><span class="tok-f">crystal</span>(<span class="tok-f">structure</span>(
   spacegroup: <span class="tok-n">136</span>,
@@ -934,10 +941,10 @@ Cl1 0.5 0.0 0.0</code></pre>
 ))</code></pre></div>
       </article>
       <article class="pkg">
-        <h3>brillouin <span class="v">0.1.0</span></h3>
-        <p>The reciprocal-space companion: Wigner–Seitz zones, HPKOT-labelled high-symmetry
-        k-paths, and band-path panels for your dispersion data.</p>
-        <div class="code"><pre><code><span class="tok-k">#import</span> <span class="tok-s">"@preview/brillouin:0.1.0"</span>: bz-figure
+        <h3>materia · reciprocal &amp; electronic</h3>
+        <p>Wigner–Seitz zones, HPKOT-labelled k-paths, band panels, and declarative
+        molecular-orbital diagrams share the same composable scene API.</p>
+        <div class="code"><pre><code><span class="tok-k">#import</span> <span class="tok-s">"@preview/materia:0.1.0"</span>: bz-figure
 
 <span class="tok-k">#</span><span class="tok-f">bz-figure</span>((a: <span class="tok-n">3.61</span>), bravais: <span class="tok-s">"cF"</span>,
   path: (<span class="tok-s">"Γ"</span>, <span class="tok-s">"X"</span>, <span class="tok-s">"W"</span>, <span class="tok-s">"K"</span>, <span class="tok-s">"Γ"</span>, <span class="tok-s">"L"</span>),
@@ -968,7 +975,7 @@ Cl1 0.5 0.0 0.0</code></pre>
         POSCAR · CIF. Typst reads the file; the plugin never touches disk.</p>
       </div>
       <div class="stage"><span class="lang rust">rust · wasm</span>
-        <h4>wyckoff-io</h4>
+        <h4>materia-io</h4>
         <p>Real parsers with real errors. CIF symmetry-op loops applied directly; bonds
         auto-detected. Freestanding <code style="font-family:var(--mono);font-size:12.5px">wasm32</code> — deterministic, no I/O.</p>
       </div>
@@ -978,7 +985,7 @@ Cl1 0.5 0.0 0.0</code></pre>
         asymmetric unit, bonds. Golden-file fixtures stay human-reviewable.</p>
       </div>
       <div class="stage"><span class="lang typst">typst</span>
-        <h4>wyckoff</h4>
+        <h4>materia</h4>
         <p>Symmetry expansion through pyxtal-generated, pymatgen-cross-validated tables;
         molecule mode; bond rules; render-mode selection.</p>
       </div>
@@ -993,13 +1000,13 @@ Cl1 0.5 0.0 0.0</code></pre>
       <li><b>Host-agnostic core.</b> The crates assume nothing about Typst — bytes in,
       structured geometry out — so the same <code style="font-family:var(--mono);font-size:13px">.wasm</code>
       could power a standalone web viewer later.</li>
-      <li><b>Reproducible by construction.</b> The toolchain is pinned and CI rebuilds the
-      committed <code style="font-family:var(--mono);font-size:13px">.wasm</code> from source and diffs
-      it — a binary a reviewer can regenerate is a binary a reviewer can trust.</li>
+      <li><b>Rebuilt in CI.</b> The toolchain is pinned and CI rebuilds each committed
+      <code style="font-family:var(--mono);font-size:13px">.wasm</code> from source, then exercises it
+      through parser and pixel-equivalence tests.</li>
       <li><b>No split-brain crystallography.</b> Table-based symmetry expansion stays in Typst,
       cross-validated against pymatgen; Rust only applies operations a file itself asserts.</li>
-      <li><b>Pure Typst remains first-class.</b> Hand-built structures never touch WASM; the
-      compiler-only path is the default and the fallback, on typst.app and in CI alike.</li>
+      <li><b>Pure Typst remains first-class.</b> Geometry rendering defaults to Typst; the
+      WASM engine is an explicit acceleration path with pixel-equivalence gates.</li>
     </ul>
   </div>
 </section>
@@ -1059,8 +1066,7 @@ Cl1 0.5 0.0 0.0</code></pre>
           <h5>Typst Universe</h5>
           <ul>
             <li><a href="https://typst.app/universe/package/scenery">scenery</a></li>
-            <li><a href="https://typst.app/universe/package/wyckoff">wyckoff</a></li>
-            <li><a href="https://typst.app/universe/package/brillouin">brillouin</a></li>
+            <li><a href="https://typst.app/universe/package/materia">materia</a></li>
           </ul>
         </div>
         <div>

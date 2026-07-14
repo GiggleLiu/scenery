@@ -1,11 +1,11 @@
 // Publication furniture for scenes: an axes triad, a color-swatch legend and a
 // scalar colorbar, emitted as cetz draw commands for composition inside a
-// `cetz.canvas`. Generalised from the validated `wyckoff/src/render.typ` triad
+// `cetz.canvas`. Generalised from the validated crystal-renderer triad
 // and legend code (which drew a fixed a/b/c triad bottom-left and element
 // swatch rows on the right); here the geometry is parameterised and the swatch
 // look reuses the renderer's shaded-ball gradient.
 //
-// The wyckoff cetz gotcha is honoured throughout: every projection/direction is
+// The crystal-renderer CeTZ gotcha is honoured throughout: every projection/direction is
 // computed by a pure helper (`triad-dirs`, `legend-rows`, `colorbar-gradient`)
 // BEFORE `import cetz.draw: *`, so the drawing block cannot be tripped by cetz
 // re-exporting `project`/`scale`. Those pure helpers are also the test surface —
@@ -25,7 +25,7 @@
 
 /// The projected, screen-space directions of `vectors` under `camera`.
 ///
-/// Pure — no cetz. Each vector is normalised in 3D (wyckoff parity) and then
+/// Pure — no CeTZ. Each vector is normalised in 3D and then
 /// projected; only the screen components `(sx, sy)` are kept, so the result is
 /// an array of 2-vectors giving each axis's on-screen direction. For the 2D
 /// identity camera `camera-2d()`, `x=(1,0,0)` maps to `(1, 0)` (screen right),
@@ -42,7 +42,7 @@
 
 /// A small labelled arrow triad showing the projected directions of `vectors`.
 ///
-/// Follows the wyckoff triad look: each vector's normalised projected direction
+/// Follows the material-figure triad look: each vector's normalised projected direction
 /// (see `triad-dirs`) is drawn as a fixed-length arrow from `origin` with an
 /// italic name at the tip. Supports fewer than three axes (layer groups pass two
 /// vectors + two names). Returns cetz draw commands for use inside a canvas.
@@ -136,7 +136,7 @@
 
 /// A legend: a shaded swatch and label per `(label, color)` entry, stacked top
 /// to bottom. The swatch reuses the renderer's ball gradient (`ball: true`, the
-/// wyckoff look) or a flat fill (`ball: false`). Returns cetz draw commands.
+/// material-figure look) or a flat fill (`ball: false`). Returns CeTZ draw commands.
 ///
 /// - entries (array): `(label, color)` pairs.
 /// - origin (array): Canvas-space anchor `(x, y)` of the first swatch.

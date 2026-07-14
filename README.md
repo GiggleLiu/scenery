@@ -2,36 +2,33 @@
 
 [![CI build status](https://github.com/GiggleLiu/scenery/actions/workflows/ci.yml/badge.svg)](https://github.com/GiggleLiu/scenery/actions/workflows/ci.yml)
 
-Scientific visualization for [Typst](https://typst.app) — a family of packages built on one shared 2D/3D scene core. Describe a figure as typed primitives, and scenery projects, depth-sorts, and paints it with [CeTZ](https://typst.app/universe/package/cetz), entirely inside the compiler: no Python, no raster step, native vector output.
-
-The [`scenery` manual source](scenery/manual.typ) is built with `make manual`; CI also publishes the compiled PDF as the `scenery-manual` artifact.
-
-## Gallery
+Native scientific visualization for [Typst](https://typst.app), organized as a
+shared scene core plus a materials-science toolkit. Figures stay as vector
+content and compile without a Python rendering step.
 
 <table>
 <tr>
-<td align="center"><a href="scenery/examples/hero.typ"><img src="scenery/images/hero.png" width="380" alt="A shaded 3D molecular scene with bonds, axes, a legend, and a colorbar"></a><br>3D scene core — spheres, bonds, legend, colorbar, axes triad</td>
-<td align="center"><a href="wyckoff/examples/perovskite.typ"><img src="wyckoff/images/perovskite.png" width="380" alt="A ball-and-stick rendering of a strontium titanate perovskite cell with titanium-oxygen octahedra"></a><br>SrTiO&#8323; perovskite with TiO&#8326; octahedra (<code>wyckoff</code>)</td>
+<td align="center"><a href="scenery/examples/hero.typ"><img src="scenery/images/hero.png" width="350" alt="A shaded 3D scene with bonds, axes, legend, and colorbar"></a><br><code>scenery</code>: shared 2D/3D scene core</td>
+<td align="center"><a href="materia/examples/perovskite.typ"><img src="materia/images/perovskite.png" width="350" alt="A strontium titanate crystal with titanium-oxygen octahedra"></a><br><code>materia</code>: real-space structures</td>
 </tr>
 <tr>
-<td align="center"><a href="scenery/examples/solids.typ"><img src="scenery/images/solids.png" width="380" alt="A row of shaded parametric solids and convex polyhedra"></a><br>Parametric solids and convex-hull polyhedra</td>
-<td align="center"><a href="wyckoff/examples/mos2.typ"><img src="wyckoff/images/mos2.png" width="380" alt="A ball-and-stick rendering of a molybdenum disulfide monolayer"></a><br>MoS&#8322; monolayer from layer group p-6m2 (<code>wyckoff</code>)</td>
+<td align="center"><a href="materia/examples/fcc-bz.typ"><img src="materia/images/fcc-bz.png" width="350" alt="An FCC Brillouin zone and high-symmetry path"></a><br><code>materia</code>: reciprocal space</td>
+<td align="center"><a href="materia/examples/co-mo.typ"><img src="materia/images/co-mo.png" width="350" alt="A carbon monoxide molecular-orbital diagram"></a><br><code>materia</code>: electronic structure</td>
 </tr>
 </table>
 
 ## Packages
 
-| Package | What it does | Status |
+| Package | Purpose | Version |
 | --- | --- | --- |
-| [`scenery`](scenery/) | The shared scene core: typed 2D/3D primitives, orthographic and perspective cameras, depth sorting, themes, and annotations. | 0.1.0 |
-| [`wyckoff`](wyckoff/) | Materials Project style crystal-structure figures from space groups, layer groups, and Wyckoff positions. | 0.1.0 |
-| [`brillouin`](brillouin/) | Brillouin zones, high-symmetry k-paths, and band-path panels. | 0.1.0 |
+| [`scenery`](scenery/) | Typed 2D/3D primitives, cameras, depth sorting, themes, transforms, annotations, and vector rendering through CeTZ. | 0.1.0 |
+| [`materia`](materia/) | Crystal/molecular structures, file import, Brillouin zones, k-paths, band panels, and declarative molecular-orbital diagrams. | 0.1.0 |
 
-More packages (tensor networks, lattice models, phase portraits, …) are tracked on the [roadmap](https://github.com/GiggleLiu/scenery/issues/17). Every package must fill a real gap on Typst Universe, serve a demonstrated need, and build on the shared core.
+`materia` builds on `scenery`. The stable composable boundaries are
+`crystal-scene`, `bz-scene`, and `mo-scene`, each returning an ordinary
+`scenery` scene dictionary.
 
 ## Quick start
-
-A 3D scene in four lines:
 
 ```typst
 #import "@preview/scenery:0.1.0": build-scene, sphere, seg, camera, render-scene
@@ -44,31 +41,30 @@ A 3D scene in four lines:
 #render-scene(scene, camera(azimuth: 30deg, elevation: 20deg), width: 5cm)
 ```
 
-A crystal from its space group:
-
 ```typst
-#import "@preview/wyckoff:0.1.0": structure, crystal
+#import "@preview/materia:0.1.0": prototypes, crystal, bz-figure
 
-#let nacl = structure(
-  spacegroup: 225,
-  lattice: (a: 5.64),
-  sites: ((element: "Na", wyckoff: "a"), (element: "Cl", wyckoff: "b")),
-)
-#crystal(nacl, bonds: auto, legend: true, axes: true, width: 8cm)
+#crystal(prototypes.rocksalt("Na", "Cl", a: 5.64), width: 7cm)
+#bz-figure((a: 3.61), bravais: "cF", width: 6cm)
 ```
 
-Each package README ([scenery](scenery/README.md), [wyckoff](wyckoff/README.md), [brillouin](brillouin/README.md)) has the full API reference and gallery.
+See the package READMEs for the complete [scene-core API](scenery/README.md) and
+[materials toolkit API](materia/README.md).
 
 ## Development
 
 ```bash
-make test       # run every package's test suite
-make examples   # compile every package's examples
-make manual     # build the scenery manual PDF
+make test       # link local packages and run all tests
+make examples   # compile all integration examples
+make manual     # build the scenery manual
+make plugin     # rebuild both bundled WASM plugins
 ```
 
-See [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) for the monorepo layout and how `@preview` imports resolve against the local checkout. The [product design](docs/design/scenery.md) records the architecture and the admission rules for new packages.
+See [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) for local package resolution
+and [`docs/plans/2026-07-14-materia-package-design.md`](docs/plans/2026-07-14-materia-package-design.md)
+for the merge and API design.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE). Third-party materials-data provenance is recorded
+in [`materia/NOTICE`](materia/NOTICE).

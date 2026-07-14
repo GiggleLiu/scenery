@@ -17,7 +17,7 @@ pub enum Camera {
 #[derive(Deserialize, Debug, Clone, Copy)]
 #[serde(rename_all = "kebab-case")]
 pub struct Cull {
-    pub seg_r_slack: f64,   // wyckoff occlude: sd < depth + seg_r_slack * r   (2.0)
+    pub seg_r_slack: f64,   // materia occlude: sd < depth + seg_r_slack * r   (2.0)
     pub point_r_slack: f64, // covered by sphere: ed < depth + point_r_slack * r (1.0)
     pub seg_w_frac: f64,    // covered by seg stroke: dist2 < (seg_w_frac * w)^2 (0.45)
     pub seg_d_slack: f64,   // ... and ed < seg depth + seg_d_slack             (1.0)

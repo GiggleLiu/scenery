@@ -1,11 +1,11 @@
-# Cargo workspace for the monorepo's two WASM plugin crates (M4 design doc,
-# "two wasm artifacts"): wyckoff-io ships in wyckoff/, scenery-engine in scenery/.
+# Cargo workspace for the monorepo's two WASM plugin crates: materia-io ships
+# in materia/, while scenery-engine ships in scenery/.
 [workspace]
 resolver = "2"
-members = ["wyckoff-io", "scenery-engine"]
+members = ["materia-io", "scenery-engine"]
 
 # Profiles must live at the workspace root (cargo ignores profiles declared in
-# member crates). Lean-wasm settings, unchanged from the Stage-1 wyckoff-io blob.
+# member crates). Lean-WASM settings are shared by both plugins.
 [profile.release]
 opt-level = "z"
 lto = true

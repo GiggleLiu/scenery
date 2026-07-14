@@ -1,11 +1,11 @@
-"""Ground-truth high-symmetry k-point / k-path fixtures for brillouin/kpath.
+"""Ground-truth high-symmetry k-point / k-path fixtures for materia.
 
 Ground truth is **seekpath** (Hinuma et al., Comp. Mater. Sci. 128, 140 (2017),
 the "HPKOT" standardization), which is the machine-checkable realization of the
 Setyawan & Curtarolo, Comp. Mater. Sci. 49, 299 (2010) ("SC-2010") k-point
 tables. seekpath ships the SC-2010 coordinate FORMULAS verbatim (see
 `seekpath/hpkot/band_path_data/<EXT>/{k_vector_parameters,points,path}.txt`);
-brillouin/src/kpath.typ ports exactly those formulas, so the Typst module and
+materia/src/reciprocal/kpath.typ ports exactly those formulas, so the Typst module and
 seekpath agree to machine precision on coordinates AND path segments.
 
 BASIS MAPPING (why the fractional numbers are directly comparable)
@@ -48,7 +48,7 @@ import numpy as np
 import seekpath
 from pymatgen.core import Lattice, Structure
 
-FIX = Path(__file__).resolve().parent.parent / "brillouin" / "tests" / "fixtures"
+FIX = Path(__file__).resolve().parent.parent / "materia" / "tests" / "fixtures"
 FIX.mkdir(parents=True, exist_ok=True)
 
 

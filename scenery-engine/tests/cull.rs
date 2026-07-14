@@ -1,9 +1,9 @@
 //! Coverage-suppression cull tests (S4 Task 7). These pin each slack boundary of
-//! the wyckoff `occlude` mirror (`cull::cull_mask`) and the pipeline order
+//! the materia `occlude` mirror (`cull::cull_mask`) and the pipeline order
 //! (cull FIRST, surviving prims keep their ORIGINAL indices). The camera is the
 //! azimuth=elevation=0 orthographic `cam0` (ca=1, sa=0, ce=1, se=0), under which
 //! projection is exactly `sx=x, sy=z, depth=y` and `scale_at == 1.0`. Cull
-//! constants are wyckoff's verbatim slacks 2.0 / 1.0 / 0.45 / 1.0.
+//! constants are materia's slacks 2.0 / 1.0 / 0.45 / 1.0.
 use scenery_engine::cull::cull_mask;
 use scenery_engine::pipeline;
 use scenery_engine::schema::*;

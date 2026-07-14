@@ -44,6 +44,7 @@
   edge: (
     color: luma(120),
     width: 0.7pt, // absolute stroke thickness
+    dash: "solid",
   ),
   arrow: (
     color: black,

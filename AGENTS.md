@@ -2,11 +2,11 @@
 
 ## Project Structure & Module Organization
 
-This is a Typst monorepo containing three independently publishable packages:
+This is a Typst monorepo containing two independently publishable packages:
 
 - `scenery/`: shared 2D/3D scene core, renderer, shapes, tests, examples, and manual.
-- `wyckoff/`: crystallographic structures and figures; generated reference data lives in `data/`.
-- `brillouin/`: reciprocal-space geometry, k-paths, and band/BZ figures.
+- `materia/`: real-space, reciprocal-space, and electronic-structure figures;
+  generated reference data lives in `data/`.
 
 Each package has `lib.typ`, `typst.toml`, `src/`, `tests/`, `examples/`, `images/`, and its own `Makefile`. Shared scripts and fixtures are under `tools/`; architecture and implementation notes are under `docs/`.
 
@@ -22,7 +22,7 @@ Run these from the repository root:
 - `make pkgroot`: rebuild `_pkgroot/preview/<package>/0.1.0` symlinks.
 - `make clean`: remove generated PDFs and local package links.
 
-Package-specific targets also work, for example `make -C scenery test` or `make -C brillouin images`.
+Package-specific targets also work, for example `make -C scenery test` or `make -C materia images`.
 
 ## Coding Style & Naming Conventions
 

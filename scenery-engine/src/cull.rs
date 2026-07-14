@@ -1,5 +1,5 @@
-//! Coverage-suppression cull — the exact mirror of wyckoff `occlude`
-//! (`wyckoff/src/figure.typ:213-251`), parameterized by the schema `Cull` slacks
+//! Coverage-suppression cull — the exact mirror of materia `occlude`,
+//! parameterized by the schema `Cull` slacks
 //! so the policy crosses the CBOR boundary as NUMBERS, not code (the engine stays
 //! host-agnostic). It is a screen-space pre-filter run FIRST in the pipeline: it
 //! drops bond stubs (`seg`) fully hidden under a sphere disk, and cell edges

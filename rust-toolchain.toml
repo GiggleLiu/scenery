@@ -1,5 +1,5 @@
-# Pins the toolchain so the committed plugin wasm blobs (wyckoff/plugin/
-# wyckoff_io.wasm, scenery/plugin/scenery_engine.wasm) rebuild deterministically.
+# Pins the toolchain used to rebuild the committed plugin WASM blobs
+# (materia/plugin/materia_io.wasm and scenery/plugin/scenery_engine.wasm).
 # CI rebuilds both crates fresh and runs the Typst suites against those builds
 # (functional gate; cross-OS wasm output is not byte-reproducible).
 # Bump `channel` only alongside rebuilt blobs.

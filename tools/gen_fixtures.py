@@ -11,7 +11,7 @@ from pathlib import Path
 import numpy as np
 from pymatgen.core import Lattice, Structure
 
-FIX = Path(__file__).resolve().parent.parent / "wyckoff" / "tests" / "fixtures"
+FIX = Path(__file__).resolve().parent.parent / "materia" / "tests" / "fixtures"
 FIX.mkdir(parents=True, exist_ok=True)
 
 # Origin-choice overrides: pymatgen's SpaceGroup(sg) setting differs from the
@@ -118,7 +118,7 @@ def write_benchmark_xyz():
             for k in range(5):
                 for el, (x, y, z) in basis:
                     lines.append(f"{el} {(i + x) * a:.3f} {(j + y) * a:.3f} {(k + z) * a:.3f}")
-    out = Path(__file__).resolve().parent.parent / "wyckoff" / "examples" / "data" / "nacl-1000.xyz"
+    out = Path(__file__).resolve().parent.parent / "materia" / "examples" / "data" / "nacl-1000.xyz"
     out.write_text("\n".join(lines) + "\n")
     print(f"wrote {out} (1000 atoms)")
 

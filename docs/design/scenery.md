@@ -1,5 +1,10 @@
 # scenery — Product Design
 
+> Historical design note (2026-07-11). The original separate-domain package
+> layout below was superseded by the consolidated
+> [`materia` design](../plans/2026-07-14-materia-package-design.md). The current
+> publishable packages are `scenery` and `materia`.
+
 **Date:** 2026-07-11
 **Status:** Approved product design (this doc is the contract for issue slicing / planning)
 **Repo:** `GiggleLiu/scenery` (monorepo; each package published separately to Typst Universe)

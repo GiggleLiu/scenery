@@ -120,7 +120,7 @@ fn sort_key(d: f64) -> f64 {
 pub fn run(req: &Request) -> Result<Vec<OutRec>, String> {
     let cam = &req.camera;
 
-    // Coverage-suppression cull (issue #32) runs FIRST — the mirror of wyckoff's
+    // Coverage-suppression cull (issue #32) runs FIRST — the mirror of materia's
     // `occlude`, gated by `req.cull` (host policy as numbers; `None` = no cull).
     // It drops hidden bond stubs / cell edges BEFORE clip+sort see them, exactly
     // as the pure path filters prims before `scene-group`. Spheres and faces

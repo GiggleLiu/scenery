@@ -41,13 +41,13 @@ import { buildScene } from "./scene.js";
   const css = (c, a) =>
     a == null ? `rgb(${c[0]},${c[1]},${c[2]})` : `rgba(${c[0]},${c[1]},${c[2]},${a})`;
   const INK = [35, 39, 47]; // legend/triad ink on the always-light plate
-  const CELL = [120, 120, 120]; // luma(120), wyckoff's cell-edge gray
+  const CELL = [120, 120, 120]; // luma(120), materia's cell-edge gray
 
   // ---- state ---------------------------------------------------------------
   const DEG = Math.PI / 180;
   const EL_MAX = 85 * DEG;
   const SPIN = 0.10; // rad/s idle spin — gentle
-  let az = 25 * DEG, el = 15 * DEG; // wyckoff's default view (Plate I)
+  let az = 25 * DEG, el = 15 * DEG; // materia's default view (Plate I)
   let engine = null, scene = null, ctx = null;
   let live = false, visible = false, dragging = false, spin = true;
   let raf = 0, lastT = 0, resumeTimer = 0, last = null;
@@ -148,7 +148,7 @@ import { buildScene } from "./scene.js";
 
     const cam = makeCamera(az, el);
 
-    // wyckoff parity: push polyhedra faces back by 0.01 along the camera-forward
+    // materia parity: push polyhedra faces back by 0.01 along the camera-forward
     // direction so face/bond depth ties resolve the same way the plates do.
     const gx = -Math.sin(az) * Math.cos(el);
     const gy = Math.cos(az) * Math.cos(el);
