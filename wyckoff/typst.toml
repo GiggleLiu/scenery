@@ -2,11 +2,12 @@
 name = "wyckoff"
 version = "0.1.0"
 entrypoint = "lib.typ"
-authors = ["GiggleLiu"]
+authors = ["Jinguo Liu <@GiggleLiu>"]
 license = "MIT"
-description = "Materials Project style crystal structure figures from space groups, layer groups and Wyckoff positions"
+description = "Draw crystal structures from groups and Wyckoff positions."
 repository = "https://github.com/GiggleLiu/scenery"
+homepage = "https://giggleliu.github.io/scenery/"
 keywords = ["crystal", "crystallography", "space group", "wyckoff", "materials", "visualization", "physics", "chemistry"]
 categories = ["visualization"]
 compiler = "0.14.0"
-exclude = ["tests/*", "examples/*", "images/*", "Makefile"]
+exclude = ["/tests/*", "/examples/*", "/images/*", "/Makefile"]

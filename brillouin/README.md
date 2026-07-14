@@ -6,11 +6,11 @@ Brillouin zones, high-symmetry k-paths and band-path panels for [Typst](https://
 
 <table>
 <tr>
-<td align="center"><a href="examples/fcc-bz.typ"><img src="images/fcc-bz.png" width="300"></a><br>fcc zone (truncated octahedron), Γ–X–W–K–Γ–L path</td>
-<td align="center"><a href="examples/hexagonal-bz.typ"><img src="images/hexagonal-bz.png" width="300"></a><br>hexagonal (hP) zone</td>
+<td align="center"><a href="examples/fcc-bz.typ"><img src="images/fcc-bz.png" width="300" alt="A truncated-octahedron fcc Brillouin zone with a labelled high-symmetry path"></a><br>fcc zone (truncated octahedron), Γ–X–W–K–Γ–L path</td>
+<td align="center"><a href="examples/hexagonal-bz.typ"><img src="images/hexagonal-bz.png" width="300" alt="A hexagonal-prism Brillouin zone with labelled high-symmetry points"></a><br>hexagonal (hP) zone</td>
 </tr>
 <tr>
-<td align="center" colspan="2"><a href="examples/bz-band.typ"><img src="images/bz-band.png" width="560"></a><br>Zone beside a band panel — fcc tight-binding bands along the path</td>
+<td align="center" colspan="2"><a href="examples/bz-band.typ"><img src="images/bz-band.png" width="560" alt="An fcc Brillouin zone beside a tight-binding band-path panel"></a><br>Zone beside a band panel — fcc tight-binding bands along the path</td>
 </tr>
 </table>
 
@@ -31,7 +31,7 @@ That is the complete source of the fcc figure above: parameters in, figure out. 
 ## `bz-figure()` options
 
 ```typst
-#bz-figure(lattice, ...options)
+#bz-figure(lattice, ..options)
 ```
 
 | Option | Default | Meaning |
@@ -77,6 +77,8 @@ That is the complete source of the fcc figure above: parameters in, figure out. 
 
 Grouped by module; every name is exported from the package root.
 
+`brillouin-version` is the package version as a Typst `version` value.
+
 ### Reciprocal lattice — `reciprocal.typ`
 
 | Name | Description |
@@ -112,7 +114,7 @@ Grouped by module; every name is exported from the package root.
 
 ## Labels and coordinates: HPKOT vs SC-2010
 
-The k-point **labels** follow the HPKOT standardization (Hinuma et al. 2017) as implemented by [seekpath](https://github.com/aiidateam/seekpath) — Greek interior points are named `SIGMA_0`, `DELTA_0`, … and `pretty-klabel` renders them Σ₀, Δ₀, …. The **coordinates** are Setyawan & Curtarolo's (2010): HPKOT reproduces SC-2010's primitive-cell choice for every Bravais type, so for the point names the two conventions share (Γ, X, W, L, U, K, …) the fractional coordinates are identical to SC-2010's. Where they differ — the *labels* of a few centered-lattice interior free points, and a handful of recommended path segments — the k-path fixtures record it per case. This package returns the centrosymmetric path variants (cP2, cF2, hP2, …); the extra segment of the non-centrosymmetric variants is not selected, since the API takes only a Bravais symbol.
+The k-point **labels** follow the HPKOT standardization (Hinuma et al. 2017) as implemented by [seekpath](https://github.com/materialscloud-org/seekpath) — Greek interior points are named `SIGMA_0`, `DELTA_0`, … and `pretty-klabel` renders them Σ₀, Δ₀, …. The **coordinates** are Setyawan & Curtarolo's (2010): HPKOT reproduces SC-2010's primitive-cell choice for every Bravais type, so for the point names the two conventions share (Γ, X, W, L, U, K, …) the fractional coordinates are identical to SC-2010's. Where they differ — the *labels* of a few centered-lattice interior free points, and a handful of recommended path segments — the k-path fixtures record it per case. This package returns the centrosymmetric path variants (cP2, cF2, hP2, …); the extra segment of the non-centrosymmetric variants is not selected, since the API takes only a Bravais symbol.
 
 ## Limitations
 
@@ -124,7 +126,7 @@ The k-point **labels** follow the HPKOT standardization (Hinuma et al. 2017) as 
 
 ## Roadmap
 
-Larger and faster scenes, a perspective camera, and richer meshes for the underlying scene core are tracked in [issue #17](https://github.com/GiggleLiu/scenery/issues/17).
+Further reciprocal-space and rendering enhancements are tracked in [issue #17](https://github.com/GiggleLiu/scenery/issues/17).
 
 ## Development
 
@@ -135,7 +137,7 @@ make images     # render examples/*.typ to images/*.png at 144 ppi
 make fixtures   # regenerate the reciprocal / k-path ground-truth fixtures
 ```
 
-Run from the repo root, `make test` / `make examples` fan out across all packages and resolve the local `@preview/brillouin:0.1.0` via `TYPST_PACKAGE_PATH` (see [`docs/DEVELOPMENT.md`](../docs/DEVELOPMENT.md)).
+From the monorepo root, `make test` and `make examples` fan out across all packages and resolve local `@preview` imports via `TYPST_PACKAGE_PATH`.
 
 ## License
 

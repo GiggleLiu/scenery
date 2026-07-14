@@ -1,3 +1,4 @@
+/// The installed brillouin package version.
 #let brillouin-version = version(0, 1, 0)
 
 // Reciprocal lattice vectors (2π convention) from direct vectors or crystal

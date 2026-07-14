@@ -8,7 +8,7 @@
 // eval'ing the very source string it displays, its compile also doubles as an
 // end-to-end test of the public API.
 
-#import "lib.typ" as scn
+#import "/lib.typ" as scn
 #import "@preview/cetz:0.5.2"
 
 #let pkg = toml("typst.toml").package
@@ -166,7 +166,7 @@
 
 *scenery* is Typst's missing 3D layer. You describe a figure as a bag of _typed
 primitives_ --- spheres, segments, wireframe edges, arrows, filled faces, indexed
-meshes and text labels --- pick an orthographic camera, and scenery projects,
+meshes and text labels --- pick an orthographic or perspective camera, and scenery projects,
 depth-sorts and paints the whole thing back-to-front with
 #link("https://typst.app/universe/package/cetz")[CeTZ]. There is no external
 tool, no raster step and no separate renderer: everything happens inside the
@@ -183,7 +183,7 @@ The entire library is one short pipeline:
 You build primitives with plain constructors (`sphere(..)`, `seg(..)`, ...) and
 collect them with `build-scene`, which returns pure data --- a flat array of
 primitives plus a bounding box, with no CeTZ dependency whatsoever. At render
-time a `camera` projects every primitive orthographically, `sort-prims` keys each
+time a `camera` projects every primitive, `sort-prims` keys each
 one by camera depth and orders them far-to-near, and the CeTZ backend draws them:
 spheres as radial-gradient shaded balls, faces flat-shaded from a single world
 light, and labels always last so they stay on top. Before sorting, line-like
@@ -206,10 +206,9 @@ plots, annotated diagrams, decorative graphics. scenery is built _on_ CeTZ and
 composes with it (see @sec-compose), so the choice is never exclusive: you can
 drop a depth-sorted 3D scene into the middle of an ordinary CeTZ canvas.
 
-The deliberate limits are covered in @sec-limits: the projection is orthographic
-only, sorting is a painter's algorithm, and everything runs in pure Typst, so
-scenes of a few hundred to a couple of thousand primitives are the comfortable
-range.
+The deliberate limits are covered in @sec-limits: the default backend uses a
+painter's algorithm, perspective points must stay in front of the camera, and
+large or intersecting scenes may benefit from the optional WASM backend.
 
 = Getting started
 
@@ -460,8 +459,8 @@ render-scene(
 
 = Cameras & views <sec-cameras>
 
-A `camera(azimuth:, elevation:)` is an orthographic view: with both angles zero it
-looks along $+y$ with $+x$ to the right and $+z$ up. Because rendering is a pure
+A `camera(azimuth:, elevation:)` is orthographic by default: with both angles zero
+it looks along $+y$ with $+x$ to the right and $+z$ up. Because rendering is a pure
 function of the camera, viewing the _same scene_ from several angles is just a
 loop over cameras. Here one molecule seen from four azimuth/elevation pairs:
 
@@ -489,6 +488,11 @@ grid(columns: 4, column-gutter: 3pt, align: center + horizon,
 )",
   columns: (0.62fr, 1fr),
 )
+
+Set `mode: "perspective"` and provide a positive `distance:` in scene units for
+pinhole perspective. Smaller distances give stronger foreshortening; the distance
+must exceed the greatest camera depth in the scene. For example,
+`camera(azimuth: 30deg, elevation: 20deg, mode: "perspective", distance: 12)`.
 
 The same call renders flat 2D diagrams: swap the camera for `camera-2d()`, the
 identity camera. Coordinates pass straight through, spheres become shaded discs
@@ -676,33 +680,33 @@ you want finer placement than the `render-scene` options give.
 
 scenery is deliberately scoped. Know these four boundaries:
 
-/ Orthographic only: There is no perspective camera --- parallel lines stay
-  parallel and there is no foreshortening. This is the right projection for
-  diagrams and technical figures, and the deliberate scope for now.
+/ Perspective near plane: Perspective projection does not clip at a near plane.
+  Every point must stay in front of the camera; increase `distance` if rendering
+  reports a point at or behind it.
 
-/ Painter's algorithm: Faces and other unsplit primitives use one depth key.
-  _Intersecting_ translucent faces can therefore occasionally layer in the wrong
-  order. Segments, edges and arrows are fragmented against opaque spheres and
-  planar faces, but faces are not BSP-split against each other and there is no
-  z-buffer.
+/ Default painter's algorithm: With `engine: "typst"`, faces and other unsplit
+  primitives use one depth key, so _intersecting_ translucent faces can layer in
+  the wrong order. The optional `engine: "wasm"` backend BSP-splits those faces.
+  Neither backend provides a z-buffer.
 
-/ Practical size cap: Everything runs in pure Typst, so compile time grows with
-  primitive count. A few hundred to ~2,000 primitives is comfortable; tens of
-  thousands are not. Prefer coarse `segments`/`rings` on solids, and reach for
-  `edge`/`seg` wireframes over dense meshes where you can.
+/ Pure-Typst size cap: Compile time grows with primitive count on the default
+  backend. Use `engine: "wasm"` for larger scenes and for translucent BSP
+  splitting. Prefer coarse `segments`/`rings` on solids, and reach for `edge`/`seg`
+  wireframes over dense meshes where you can.
 
 / Adaptive mesh visibility: Opaque meshes cull rear faces by default;
   translucent meshes keep both sides with quieter rear strokes. Use `cull: none`,
   `cull: "back"`, `cull: "front"`, or `hidden-stroke:` to override the policy.
 
-*Roadmap.* A WASM geometry accelerator for larger and faster scenes, a perspective
-camera, and richer meshes are tracked in
+*Roadmap.* Further scene-core enhancements are tracked in
 #link("https://github.com/GiggleLiu/scenery/issues/17")[issue #17].
 
 = API reference
 
 Every name below is exported from the package root. Import the ones you use by
 name (@sec-prims explains why not `*`).
+
+`scenery-version` is the package version as a Typst `version` value.
 
 #let api(title, rows) = {
   block(above: 0.9em, below: 0.5em, text(weight: "bold")[#title])
@@ -741,9 +745,10 @@ name (@sec-prims explains why not `*`).
 ))
 
 #api("Camera", (
-  [`camera(azimuth:, elevation:)`], [Orthographic camera; `+z` up at zero angles.],
+  [`camera(azimuth:, elevation:, mode:, distance:)`], [Orthographic or perspective camera.],
   [`camera-2d()`], [Identity camera: `(x, y)` passes straight through.],
   [`project(cam, point)`], [Maps a 3-point to `(sx, sy, depth)`.],
+  [`project-scale(cam, depth)`], [Screen-per-world scale at a projected depth.],
 ))
 
 #api("Shape generators", (
@@ -756,8 +761,8 @@ name (@sec-prims explains why not `*`).
 
 #api("Rendering", (
   [`render-scene(scene, camera, ..)`],
-  [Renders a scene to content at a target on-page width.],
-  [`scene-group(scene, camera, ..)`], [Raw CeTZ commands; `register-anchors:` controls logical anchors.],
+  [Renders a scene at a target width; `engine:` selects `"typst"` or `"wasm"`.],
+  [`scene-group(scene, camera, ..)`], [Raw CeTZ commands; controls anchors and geometry engine.],
   [`sort-prims(prims, camera)`], [Pure depth-sort (far-to-near); meshes exploded to faces.],
 ))
 

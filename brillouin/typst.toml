@@ -2,11 +2,12 @@
 name = "brillouin"
 version = "0.1.0"
 entrypoint = "lib.typ"
-authors = ["GiggleLiu"]
+authors = ["Jinguo Liu <@GiggleLiu>"]
 license = "MIT"
-description = "Brillouin zones, high-symmetry k-paths and band-path panels for Typst"
+description = "Draw Brillouin zones, k-paths, and band-path panels."
 repository = "https://github.com/GiggleLiu/scenery"
+homepage = "https://giggleliu.github.io/scenery/"
 keywords = ["brillouin", "reciprocal lattice", "band structure", "k-path", "crystallography", "physics", "visualization"]
 categories = ["visualization"]
 compiler = "0.14.0"
-exclude = ["tests/*"]
+exclude = ["/tests/*", "/examples/*", "/images/*", "/Makefile"]

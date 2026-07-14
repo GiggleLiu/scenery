@@ -33,7 +33,13 @@
   )
 }
 
-// params dict -> (a1, a2, a3) direct vectors, matching wyckoff's orientation.
+/// Converts conventional-cell parameters to three direct lattice vectors.
+///
+/// Missing `b`/`c` lengths default to `a`; missing `alpha`/`beta`/`gamma`
+/// angles default to 90 degrees. The orientation matches wyckoff.
+///
+/// - p (dictionary): Lattice parameters in Å and angles or degree values.
+/// -> array
 #let params-to-vectors(p) = {
   let q = _fill-params(p)
   let (ca, cb, cg) = (calc.cos(q.alpha * 1deg), calc.cos(q.beta * 1deg), calc.cos(q.gamma * 1deg))

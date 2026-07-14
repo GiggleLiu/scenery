@@ -1,3 +1,4 @@
+/// The installed wyckoff package version.
 #let wyckoff-version = version(0, 1, 0)
 
 #import "src/structure.typ": structure

@@ -1,15 +1,15 @@
 # wyckoff
 
-Materials Project style crystal structure figures for [Typst](https://typst.app), specified the way crystallographers think: a space group (or layer group), Wyckoff positions, free coordinates, and lattice parameters. The package expands the symmetry, finds bonds and coordination polyhedra, and renders a shaded 3D ball-and-stick figure — entirely inside the Typst compiler, no external tools.
+Materials Project style crystal structure figures for [Typst](https://typst.app), specified the way crystallographers think: a space group (or layer group), Wyckoff positions, free coordinates, and lattice parameters. The package expands the symmetry, finds bonds and coordination polyhedra, and renders a shaded 3D ball-and-stick figure inside the Typst compiler, with bundled WASM plugins for file parsing and optional geometry acceleration.
 
 <table>
 <tr>
-<td align="center"><img src="images/nacl.png" width="380"><br>NaCl (rocksalt, Fm-3m)</td>
-<td align="center"><img src="images/perovskite.png" width="380"><br>SrTiO&#8323; (perovskite, Pm-3m) with TiO&#8326; octahedra</td>
+<td align="center"><img src="images/nacl.png" width="380" alt="A ball-and-stick rendering of a sodium chloride rocksalt unit cell"><br>NaCl (rocksalt, Fm-3m)</td>
+<td align="center"><img src="images/perovskite.png" width="380" alt="A ball-and-stick rendering of a strontium titanate perovskite cell with titanium-oxygen octahedra"><br>SrTiO&#8323; (perovskite, Pm-3m) with TiO&#8326; octahedra</td>
 </tr>
 <tr>
-<td align="center"><img src="images/diamond.png" width="380"><br>Diamond (Fd-3m, origin choice 2)</td>
-<td align="center"><img src="images/mos2.png" width="380"><br>MoS&#8322; monolayer (layer group p-6m2)</td>
+<td align="center"><img src="images/diamond.png" width="380" alt="A ball-and-stick rendering of a diamond conventional cell"><br>Diamond (Fd-3m, origin choice 2)</td>
+<td align="center"><img src="images/mos2.png" width="380" alt="A ball-and-stick rendering of a molybdenum disulfide monolayer"><br>MoS&#8322; monolayer (layer group p-6m2)</td>
 </tr>
 </table>
 
@@ -25,7 +25,7 @@ The sources for these figures are in [`examples/`](examples/).
 
 That is the complete source of the NaCl figure above. (The examples in this repository import `/lib.typ` directly so they run against the working tree; in your own documents use the `@preview` import shown here.)
 
-The public API is four names: `structure` builds a structure value, `crystal` renders it as a standalone figure, `crystal-group` emits [cetz](https://typst.app/universe/package/cetz) draw calls for embedding in an existing canvas, and `prototypes` is a module of ready-made common structures.
+The main API is `structure`, `crystal`, `crystal-group`, and `molecule`. The package also exports `import-xyz`, `import-poscar`, and `import-cif`, the ready-made `prototypes` module, and the `wyckoff-version` value.
 
 ## Specifying structures
 
@@ -117,14 +117,16 @@ multi-block files — are rejected with an error naming the unsupported feature.
 ## `crystal()` options
 
 ```typst
-#crystal(structure, ...options)
+#crystal(structure, ..options)
 ```
 
 | Option | Default | Meaning |
 | --- | --- | --- |
 | `view` | `(azimuth: 25deg, elevation: 15deg)` | Camera orientation (orthographic by default; see [Perspective camera](#perspective-camera)). |
 | `supercell` | `(1, 1, 1)` | Repetitions along a, b, c. |
+| `mode` | `"ball-and-stick"` | `"ball-and-stick"`, `"space-filling"`/`"cpk"`, or `"licorice"`. |
 | `bonds` | `auto` | `auto`, `none`, or an array of explicit rules (below). |
+| `bond-color` | `auto` | Two atom-coloured halves with `auto`, or one explicit color per bond. |
 | `polyhedra` | `()` | Elements to draw coordination polyhedra around, e.g. `("Ti",)`. |
 | `labels` | `false` | Print the element symbol on each atom. |
 | `legend` | `true` | Element color swatches beside the figure. |
@@ -132,6 +134,7 @@ multi-block files — are rejected with an error naming the unsupported feature.
 | `radius` | `0.45` | Sphere size as a fraction of each element's display radius. |
 | `colors` | `(:)` | Optional element-to-color overrides, e.g. `(Na: rgb("#4477aa"), Cl: rgb("#cc8963"))`. |
 | `width` | `8cm` | Rendered width of the figure. Legend and axes draw outside this width when enabled. |
+| `engine` | `"typst"` | Geometry backend: `"typst"` or the optional `"wasm"` accelerator. |
 
 `crystal-group()` takes the same structure/scene options but `scale:` instead of `width:`, and returns raw cetz draw calls so you can place a structure inside a larger `cetz.canvas` alongside your own annotations.
 
@@ -163,7 +166,7 @@ Bonds are split at the midpoint into two atom-coloured halves by default;
 pass `bond-color: <color>` to draw each bond as a single stick in that color
 instead (ball-and-stick and licorice).
 
-<img src="images/render-modes.png" width="760">
+<img src="images/render-modes.png" width="760" alt="The same crystal rendered in ball-and-stick, space-filling, and licorice modes">
 
 ### Perspective camera
 
@@ -178,7 +181,7 @@ foreshortening, default 25):
 
 The default remains orthographic and is pixel-identical to earlier versions.
 
-<img src="images/perspective.png" width="760">
+<img src="images/perspective.png" width="760" alt="A crystal rendered with perspective foreshortening">
 
 ### Large scenes: the WASM accelerator
 
@@ -230,7 +233,7 @@ Each prototype is a one-liner returning a `structure` value; lattice parameters 
 
 ## How it works
 
-The symmetry data ships with the package as pre-generated JSON tables: Wyckoff positions and symmetry operations for all 230 space groups and all 80 layer groups, produced by [pyxtal](https://github.com/MaterSim/PyXtal) and cross-validated against [pymatgen](https://pymatgen.org) `Structure.from_spacegroup` fixtures during testing. At compile time the package expands each site through the group's operations, deduplicates, and converts to Cartesian coordinates. The orthographic projection and painter's-algorithm rendering — every sphere, bond segment, polyhedron face, and cell edge gets a depth key and is painted back to front — are provided by the shared [scenery](https://typst.app/universe/package/scenery) scene core, which `wyckoff` builds on; the crystallography-specific coverage suppression that hides bond stubs behind atoms is applied as a pre-filter before handing primitives to scenery.
+The symmetry data ships with the package as pre-generated JSON tables: Wyckoff positions and symmetry operations for all 230 space groups and all 80 layer groups, produced by [pyxtal](https://github.com/MaterSim/PyXtal) and cross-validated against [pymatgen](https://pymatgen.org) `Structure.from_spacegroup` fixtures during testing. At compile time the package expands each site through the group's operations, deduplicates, and converts to Cartesian coordinates. Orthographic or perspective projection and depth-ordered rendering are provided by the shared [scenery](https://typst.app/universe/package/scenery) scene core; the crystallography-specific coverage suppression that hides bond stubs behind atoms is applied before handing primitives to scenery. `engine: "wasm"` moves the geometry-heavy work and translucent-face BSP splitting to the bundled accelerator.
 
 ### Space-group settings
 
@@ -238,14 +241,13 @@ Structures are generated in the **standard ITA settings with conventional cells*
 
 ### Known limitations
 
-- The painter's algorithm sorts whole primitives by depth, so *intersecting* translucent polyhedra can occasionally be layered in the wrong order. Non-intersecting scenes (the common case) sort correctly.
-- Everything runs in pure Typst, so large supercells compile slowly. A few hundred atoms is comfortable; thousands are not.
+- The default pure-Typst engine sorts whole faces by depth, so *intersecting* translucent polyhedra can layer incorrectly. Use `engine: "wasm"` to BSP-split them.
+- Large supercells compile slowly with the default engine. The optional WASM engine is intended for hundreds to thousands of atoms.
 - Standard ITA settings only (see above).
 
 ## Roadmap
 
-- Brillouin zone drawings
-- A WASM geometry engine as an optional accelerator for large scenes
+Further crystallography and rendering enhancements are tracked in [issue #17](https://github.com/GiggleLiu/scenery/issues/17).
 
 ## Development
 

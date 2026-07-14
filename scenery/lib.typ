@@ -1,3 +1,4 @@
+/// The installed scenery package version.
 #let scenery-version = version(0, 1, 0)
 
 // Pure scene-core math: vector/matrix helpers and the orthographic camera.

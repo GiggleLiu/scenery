@@ -637,8 +637,8 @@
 /// for composition inside an existing `cetz.canvas`.
 ///
 /// Coordinates are the camera's screen projection times `unit` (canvas units per
-/// scene unit). Spheres are gradient-shaded balls (radius in scene units, no
-/// perspective foreshortening); segments are round-capped strokes; edges thin
+/// scene unit). Spheres are gradient-shaded balls (with perspective-scaled radii
+/// when applicable); segments are round-capped strokes; edges thin
 /// neutral lines; arrows strokes with a scaled head; faces flat-shaded, possibly
 /// translucent, filled polygons; labels content drawn last.
 ///
@@ -673,6 +673,9 @@
 ///   spanning the scene height (see `annotate.colorbar`).
 /// - register-anchors (bool): Export logical object anchors to the surrounding
 ///   CeTZ canvas. Disable when no later CeTZ command needs them.
+/// - engine (str): `"typst"` (default) or the bundled `"wasm"` geometry backend.
+/// - engine-cull (none, dictionary): Optional WASM-side culling policy used by
+///   higher-level packages.
 /// -> content
 #let scene-group(
   scene,
@@ -792,6 +795,9 @@
 /// - legend (none, array): `(label, color)` legend entries, placed right.
 /// - colorbar (none, dictionary): `(colormap:, range:)` colorbar spec, placed
 ///   right.
+/// - engine (str): `"typst"` (default) or the bundled `"wasm"` geometry backend.
+/// - engine-cull (none, dictionary): Optional WASM-side culling policy used by
+///   higher-level packages.
 /// -> content
 #let render-scene(
   scene,

@@ -4,18 +4,18 @@
 
 Scientific visualization for [Typst](https://typst.app) — a family of packages built on one shared 2D/3D scene core. Describe a figure as typed primitives, and scenery projects, depth-sorts, and paints it with [CeTZ](https://typst.app/universe/package/cetz), entirely inside the compiler: no Python, no raster step, native vector output.
 
-**[Download the manual (PDF)](https://github.com/GiggleLiu/scenery/releases/latest/download/scenery-manual.pdf)**
+The [`scenery` manual source](scenery/manual.typ) is built with `make manual`; CI also publishes the compiled PDF as the `scenery-manual` artifact.
 
 ## Gallery
 
 <table>
 <tr>
-<td align="center"><a href="scenery/examples/hero.typ"><img src="scenery/images/hero.png" width="380"></a><br>3D scene core — spheres, bonds, legend, colorbar, axes triad</td>
-<td align="center"><a href="wyckoff/examples/perovskite.typ"><img src="wyckoff/images/perovskite.png" width="380"></a><br>SrTiO&#8323; perovskite with TiO&#8326; octahedra (<code>wyckoff</code>)</td>
+<td align="center"><a href="scenery/examples/hero.typ"><img src="scenery/images/hero.png" width="380" alt="A shaded 3D molecular scene with bonds, axes, a legend, and a colorbar"></a><br>3D scene core — spheres, bonds, legend, colorbar, axes triad</td>
+<td align="center"><a href="wyckoff/examples/perovskite.typ"><img src="wyckoff/images/perovskite.png" width="380" alt="A ball-and-stick rendering of a strontium titanate perovskite cell with titanium-oxygen octahedra"></a><br>SrTiO&#8323; perovskite with TiO&#8326; octahedra (<code>wyckoff</code>)</td>
 </tr>
 <tr>
-<td align="center"><a href="scenery/examples/solids.typ"><img src="scenery/images/solids.png" width="380"></a><br>Parametric solids and convex-hull polyhedra</td>
-<td align="center"><a href="wyckoff/examples/mos2.typ"><img src="wyckoff/images/mos2.png" width="380"></a><br>MoS&#8322; monolayer from layer group p-6m2 (<code>wyckoff</code>)</td>
+<td align="center"><a href="scenery/examples/solids.typ"><img src="scenery/images/solids.png" width="380" alt="A row of shaded parametric solids and convex polyhedra"></a><br>Parametric solids and convex-hull polyhedra</td>
+<td align="center"><a href="wyckoff/examples/mos2.typ"><img src="wyckoff/images/mos2.png" width="380" alt="A ball-and-stick rendering of a molybdenum disulfide monolayer"></a><br>MoS&#8322; monolayer from layer group p-6m2 (<code>wyckoff</code>)</td>
 </tr>
 </table>
 
@@ -23,7 +23,7 @@ Scientific visualization for [Typst](https://typst.app) — a family of packages
 
 | Package | What it does | Status |
 | --- | --- | --- |
-| [`scenery`](scenery/) | The shared scene core: typed 2D/3D primitives, orthographic camera, painter's depth sort, themes, annotations. Typst's first programmatic 3D API. | 0.1.0 |
+| [`scenery`](scenery/) | The shared scene core: typed 2D/3D primitives, orthographic and perspective cameras, depth sorting, themes, and annotations. | 0.1.0 |
 | [`wyckoff`](wyckoff/) | Materials Project style crystal-structure figures from space groups, layer groups, and Wyckoff positions. | 0.1.0 |
 | [`brillouin`](brillouin/) | Brillouin zones, high-symmetry k-paths, and band-path panels. | 0.1.0 |
 

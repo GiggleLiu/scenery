@@ -2,6 +2,23 @@
 
 #let _default-view = (azimuth: 25deg, elevation: 15deg)
 
+/// Renders a periodic crystal structure as a standalone figure.
+///
+/// - structure (dictionary): A value returned by `structure` or a file importer.
+/// - view (dictionary): Camera azimuth/elevation and optional perspective mode.
+/// - supercell (array): Repetitions along the three lattice directions.
+/// - mode (str): `"ball-and-stick"`, `"space-filling"`/`"cpk"`, or `"licorice"`.
+/// - bonds (auto, none, array): Automatic, disabled, or explicit bond rules.
+/// - bond-color (auto, color): Two-tone bonds or one explicit bond color.
+/// - polyhedra (array): Elements whose coordination polyhedra are drawn.
+/// - labels (bool): Whether to label atoms with element symbols.
+/// - legend (bool): Whether to draw element color swatches.
+/// - axes (bool): Whether to draw the crystallographic orientation triad.
+/// - radius (auto, float): Mode-dependent atom-radius scale.
+/// - colors (dictionary): Element-to-color overrides.
+/// - width (length): Target figure width.
+/// - engine (str): `"typst"` (default) or the bundled `"wasm"` accelerator.
+/// -> content
 #let crystal(
   structure,
   view: _default-view,
@@ -28,6 +45,15 @@
     } else { none })
 }
 
+/// Emits a crystal as raw CeTZ draw commands for an existing canvas.
+///
+/// Takes the same structure and scene options as `crystal`, but uses `scale:`
+/// (canvas units per scene unit) and does not draw the standalone legend or axes.
+///
+/// - structure (dictionary): A value returned by `structure` or a file importer.
+/// - scale (float): Canvas units per scene unit.
+/// - engine (str): `"typst"` (default) or the bundled `"wasm"` accelerator.
+/// -> content
 #let crystal-group(
   structure,
   view: _default-view,
@@ -48,9 +74,13 @@
   draw-scene(scene, scale: scale, engine: engine)
 }
 
-/// Render a non-periodic molecule: atoms + bonds, no unit cell, no
+/// Renders a non-periodic molecule: atoms and bonds, with no unit cell or
 /// crystallographic triad. Same scene options as crystal().
-/// mode: "ball-and-stick" (default) | "space-filling"/"cpk" | "licorice".
+///
+/// - structure (dictionary): A non-periodic value returned by `import-xyz`.
+/// - mode (str): `"ball-and-stick"`, `"space-filling"`/`"cpk"`, or `"licorice"`.
+/// - engine (str): `"typst"` (default) or the bundled `"wasm"` accelerator.
+/// -> content
 #let molecule(
   structure,
   view: _default-view,
