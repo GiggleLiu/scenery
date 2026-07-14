@@ -1,5 +1,6 @@
 tools/.venv/
 _pkgroot/
+/target/
 **/tests/*.pdf
 **/tests/*.png
 **/examples/*.pdf
@@ -7,3 +8,5 @@ _pkgroot/
 *.pdf
 __pycache__/
 .superpowers/
+.DS_Store
+**/.DS_Store

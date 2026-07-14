@@ -12,6 +12,7 @@
     color-vesta: rgb(e.color-vesta),
     r-cov: e.r-cov,
     r-atom: e.r-atom,
+    r-vdw: e.r-vdw,
   )
 }
 

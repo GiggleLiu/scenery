@@ -1,0 +1,1099 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>scenery — scientific figures for Typst</title>
+<meta name="description" content="A family of Typst packages for publication-quality scientific figures: crystal structures from space groups, molecules from .xyz/POSCAR/CIF files, and Brillouin zones — rendered entirely inside the compiler.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cline x1='10' y1='20' x2='22' y2='11' stroke='%23888' stroke-width='2.5'/%3E%3Ccircle cx='10' cy='20' r='7' fill='%234a6d96'/%3E%3Ccircle cx='23' cy='10' r='5' fill='%23c2632c'/%3E%3C/svg%3E">
+<script>
+  // Apply saved theme before first paint to avoid a flash.
+  (function () {
+    var t = null;
+    try { t = localStorage.getItem("scenery-theme"); } catch (e) {}
+    if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+  })();
+</script>
+<style>
+/* ================= tokens ================= */
+:root {
+  --paper: #f6f2ea;
+  --paper-2: #fcf9f3;
+  --ink: #23272f;
+  --ink-soft: #5c6370;
+  --line: #e1d8c7;
+  --line-soft: #eae3d4;
+  --copper: #c2632c;
+  --copper-ink: #9d4c1a;
+  --slate: #46688f;
+  --slate-ink: #3d5b7e;
+  --plate: #ffffff;
+  --plate-line: #e6dfd0;
+  --code-bg: #252b36;
+  --code-line: #323a48;
+  --code-ink: #d7dde8;
+  --code-comment: #7d8798;
+  --code-key: #e8a06c;
+  --code-str: #a3c9a8;
+  --code-num: #8fb8e0;
+  --code-fn: #d3b8e8;
+  --shadow: 0 1px 2px rgba(40, 32, 18, .05), 0 12px 32px -16px rgba(40, 32, 18, .18);
+  --shadow-lift: 0 2px 4px rgba(40, 32, 18, .06), 0 24px 48px -20px rgba(40, 32, 18, .28);
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", "URW Palladio L", Georgia, serif;
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #14171d;
+    --paper-2: #1a1e26;
+    --ink: #e7e2d6;
+    --ink-soft: #9ba2ae;
+    --line: #2b313c;
+    --line-soft: #232833;
+    --copper: #e0854a;
+    --copper-ink: #e0854a;
+    --slate: #85a9cf;
+    --slate-ink: #85a9cf;
+    --plate: #f8f7f4;
+    --plate-line: #333a46;
+    --code-bg: #0f1217;
+    --code-line: #232a35;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 12px 32px -16px rgba(0, 0, 0, .5);
+    --shadow-lift: 0 2px 4px rgba(0, 0, 0, .35), 0 24px 48px -20px rgba(0, 0, 0, .65);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #14171d;
+  --paper-2: #1a1e26;
+  --ink: #e7e2d6;
+  --ink-soft: #9ba2ae;
+  --line: #2b313c;
+  --line-soft: #232833;
+  --copper: #e0854a;
+  --copper-ink: #e0854a;
+  --slate: #85a9cf;
+  --slate-ink: #85a9cf;
+  --plate: #f8f7f4;
+  --plate-line: #333a46;
+  --code-bg: #0f1217;
+  --code-line: #232a35;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 12px 32px -16px rgba(0, 0, 0, .5);
+  --shadow-lift: 0 2px 4px rgba(0, 0, 0, .35), 0 24px 48px -20px rgba(0, 0, 0, .65);
+  color-scheme: dark;
+}
+
+/* ================= base ================= */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+body {
+  font-family: var(--serif);
+  font-size: 17px;
+  line-height: 1.65;
+  background: var(--paper);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+img { max-width: 100%; height: auto; display: block; }
+a { color: var(--slate-ink); text-decoration-color: color-mix(in srgb, var(--slate) 45%, transparent); text-underline-offset: 3px; }
+a:hover { color: var(--copper-ink); text-decoration-color: currentColor; }
+.wrap { max-width: 1140px; margin: 0 auto; padding: 0 24px; }
+section { scroll-margin-top: 90px; }
+
+/* small-caps eyebrow */
+.eyebrow {
+  font-family: var(--serif);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: var(--copper-ink);
+}
+.eyebrow .no { color: var(--ink-soft); font-weight: 400; }
+
+h2 {
+  font-size: clamp(30px, 4.4vw, 44px);
+  font-weight: 500;
+  line-height: 1.12;
+  letter-spacing: -.01em;
+  margin: 14px 0 18px;
+}
+.lede { font-size: 19px; color: var(--ink-soft); max-width: 62ch; }
+.lede strong { color: var(--ink); font-weight: 600; }
+
+/* ================= header ================= */
+header {
+  position: sticky; top: 0; z-index: 50;
+  background: color-mix(in srgb, var(--paper) 86%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line-soft);
+}
+.nav {
+  display: flex; align-items: center; gap: 28px;
+  height: 60px;
+}
+.brand {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 20px; font-weight: 600; letter-spacing: .01em;
+  color: var(--ink); text-decoration: none;
+}
+.brand svg { display: block; }
+.nav-links { display: flex; gap: 22px; margin-left: auto; align-items: center; }
+.nav-links a {
+  font-size: 14.5px; color: var(--ink-soft); text-decoration: none;
+  letter-spacing: .02em;
+}
+.nav-links a:hover { color: var(--copper-ink); }
+.nav-gh {
+  border: 1px solid var(--line); border-radius: 999px;
+  padding: 5px 14px; color: var(--ink) !important;
+}
+.nav-gh:hover { border-color: var(--copper); }
+#theme-toggle {
+  background: none; border: 1px solid var(--line); border-radius: 999px;
+  width: 32px; height: 32px; cursor: pointer; color: var(--ink-soft);
+  display: grid; place-items: center; font-size: 15px; line-height: 1;
+}
+#theme-toggle:hover { border-color: var(--copper); color: var(--copper-ink); }
+:root[data-theme="dark"] #theme-toggle .moon { display: none; }
+:root:not([data-theme="dark"]) #theme-toggle .sun { display: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) #theme-toggle .moon { display: none; }
+  :root:not([data-theme="light"]) #theme-toggle .sun { display: inline; }
+  :root[data-theme="light"] #theme-toggle .sun { display: none; }
+  :root[data-theme="light"] #theme-toggle .moon { display: inline; }
+}
+@media (max-width: 760px) {
+  .nav-links a:not(.nav-gh) { display: none; }
+}
+
+/* ================= hero ================= */
+.hero {
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid var(--line-soft);
+}
+.hero::before {
+  /* faint crystallographic grid */
+  content: "";
+  position: absolute; inset: 0;
+  background:
+    repeating-linear-gradient(0deg, var(--line-soft) 0 1px, transparent 1px 56px),
+    repeating-linear-gradient(90deg, var(--line-soft) 0 1px, transparent 1px 56px);
+  opacity: .5;
+  mask-image: radial-gradient(120% 90% at 70% 10%, #000 0%, transparent 70%);
+  -webkit-mask-image: radial-gradient(120% 90% at 70% 10%, #000 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  gap: 56px;
+  align-items: center;
+  padding: 84px 0 88px;
+}
+.hero h1 {
+  font-size: clamp(42px, 6.4vw, 72px);
+  font-weight: 500;
+  line-height: 1.04;
+  letter-spacing: -.015em;
+  margin: 20px 0 22px;
+}
+.hero h1 em { font-style: italic; color: var(--copper-ink); }
+.hero .pitch { font-size: 19.5px; color: var(--ink-soft); max-width: 56ch; margin-bottom: 30px; }
+.hero .pitch strong { color: var(--ink); font-weight: 600; }
+.cta-row { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin: 28px 0 0; }
+.btn {
+  display: inline-flex; align-items: center; gap: 9px;
+  font-family: var(--serif); font-size: 16px; font-weight: 600;
+  padding: 11px 22px; border-radius: 8px; text-decoration: none;
+  border: 1px solid transparent;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.btn-primary { background: var(--copper); color: #fff; }
+.btn-primary:hover { color: #fff; transform: translateY(-1px); box-shadow: var(--shadow); }
+.btn-ghost { border-color: var(--line); color: var(--ink); }
+.btn-ghost:hover { border-color: var(--copper); color: var(--copper-ink); }
+.stats {
+  display: flex; flex-wrap: wrap; gap: 0 36px; margin-top: 40px;
+  border-top: 1px solid var(--line-soft); padding-top: 22px;
+}
+.stat .n { font-size: 26px; font-weight: 600; letter-spacing: -.01em; }
+.stat .l { font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); }
+
+/* plates — every figure sits on a white plate like a journal figure */
+.plate {
+  background: var(--plate);
+  border: 1px solid var(--plate-line);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  padding: 18px;
+  transition: transform .25s ease, box-shadow .25s ease;
+}
+.plate img { margin: 0 auto; }
+figure.fig { margin: 0; }
+figcaption {
+  font-size: 14px; color: var(--ink-soft); text-align: center;
+  padding-top: 12px; line-height: 1.5;
+}
+figcaption .pl {
+  font-variant-caps: small-caps; letter-spacing: .12em;
+  color: var(--copper-ink); font-weight: 600;
+}
+.hero-fig .plate { padding: 26px; }
+.hero-fig .plate:hover { transform: translateY(-4px) rotate(.3deg); box-shadow: var(--shadow-lift); }
+
+/* load animation */
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.hero .rise { animation: rise .7s cubic-bezier(.2,.7,.2,1) both; }
+.hero .d1 { animation-delay: .05s; } .hero .d2 { animation-delay: .15s; }
+.hero .d3 { animation-delay: .25s; } .hero .d4 { animation-delay: .35s; }
+.hero .d5 { animation-delay: .45s; }
+
+/* ================= code ================= */
+.code {
+  background: var(--code-bg);
+  border: 1px solid var(--code-line);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.code .bar {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 12px; color: var(--code-comment);
+  padding: 9px 16px; border-bottom: 1px solid var(--code-line);
+  letter-spacing: .04em;
+}
+.code .bar::before {
+  content: ""; width: 9px; height: 9px; border-radius: 50%;
+  background: var(--copper); opacity: .8;
+}
+.code pre {
+  padding: 16px 18px; overflow-x: auto;
+  font-family: var(--mono); font-size: 13.5px; line-height: 1.62;
+  color: var(--code-ink);
+}
+.code code { font-family: inherit; }
+.tok-c { color: var(--code-comment); font-style: italic; }
+.tok-k { color: var(--code-key); }
+.tok-s { color: var(--code-str); }
+.tok-n { color: var(--code-num); }
+.tok-f { color: var(--code-fn); }
+.hero-code { margin-top: 34px; max-width: 620px; }
+.hero-code .note { font-size: 13.5px; color: var(--ink-soft); margin-top: 10px; font-style: italic; }
+
+/* ================= ribbon ================= */
+.ribbon {
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--paper-2);
+}
+.ribbon-inner {
+  display: flex; flex-wrap: wrap; gap: 10px 26px; align-items: baseline;
+  padding: 16px 0; font-size: 15px;
+}
+.ribbon .tag {
+  font-size: 12px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase;
+  color: #fff; background: var(--copper); border-radius: 4px; padding: 2px 8px;
+}
+:root[data-theme="dark"] .ribbon .tag { color: #14171d; }
+.ribbon b { font-weight: 600; }
+.ribbon span.sep { color: var(--line); }
+.ribbon .muted { color: var(--ink-soft); }
+
+/* ================= sections ================= */
+.section { padding: 96px 0; border-bottom: 1px solid var(--line-soft); }
+.section-head { max-width: 760px; margin-bottom: 48px; }
+
+/* ---- import tabs ---- */
+.tabs input[type="radio"] { position: absolute; opacity: 0; pointer-events: none; }
+.tab-labels { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 26px; }
+.tab-labels label {
+  font-family: var(--mono); font-size: 14px;
+  border: 1px solid var(--line); border-radius: 999px;
+  padding: 8px 20px; cursor: pointer; color: var(--ink-soft);
+  transition: all .15s ease;
+}
+.tab-labels label:hover { border-color: var(--copper); color: var(--copper-ink); }
+.tab-panel { display: none; }
+#tab-xyz:checked ~ .tab-body #panel-xyz,
+#tab-poscar:checked ~ .tab-body #panel-poscar,
+#tab-cif:checked ~ .tab-body #panel-cif { display: grid; animation: rise .45s ease both; }
+#tab-xyz:checked ~ .tab-labels label[for="tab-xyz"],
+#tab-poscar:checked ~ .tab-labels label[for="tab-poscar"],
+#tab-cif:checked ~ .tab-labels label[for="tab-cif"] {
+  background: var(--ink); color: var(--paper); border-color: var(--ink);
+}
+:root[data-theme="dark"] #tab-xyz:checked ~ .tab-labels label[for="tab-xyz"],
+:root[data-theme="dark"] #tab-poscar:checked ~ .tab-labels label[for="tab-poscar"],
+:root[data-theme="dark"] #tab-cif:checked ~ .tab-labels label[for="tab-cif"] {
+  background: var(--ink); color: var(--paper);
+}
+.tab-panel {
+  grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
+  gap: 32px; align-items: start;
+}
+.tab-panel .stack { display: grid; gap: 18px; }
+.tab-panel .fig-side { display: grid; gap: 14px; align-content: start; }
+.io-note { font-size: 14.5px; color: var(--ink-soft); font-style: italic; }
+.io-note code { font-family: var(--mono); font-style: normal; font-size: 13px; background: var(--paper-2); border: 1px solid var(--line-soft); border-radius: 4px; padding: 1px 5px; }
+
+/* arrow between file and code */
+.becomes {
+  display: flex; align-items: center; gap: 12px;
+  color: var(--ink-soft); font-size: 13px; letter-spacing: .18em; text-transform: uppercase;
+}
+.becomes::before, .becomes::after { content: ""; height: 1px; background: var(--line); flex: 1; }
+
+/* ---- render modes ---- */
+.modes-plate { margin-bottom: 40px; }
+.defs {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 0 40px; border-top: 1px solid var(--line);
+}
+.defs > div { padding: 22px 0; border-bottom: 1px solid var(--line-soft); }
+.defs dt { font-family: var(--mono); font-size: 14.5px; color: var(--copper-ink); margin-bottom: 6px; }
+.defs dd { font-size: 15px; color: var(--ink-soft); }
+
+/* ---- perspective ---- */
+.split {
+  display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: 48px; align-items: center;
+}
+.split .code { margin-top: 24px; }
+
+/* ---- gallery ---- */
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+}
+.gallery .plate:hover { transform: translateY(-3px); box-shadow: var(--shadow-lift); }
+.gallery .fig { display: flex; flex-direction: column; }
+.gallery .plate { flex: 1; display: flex; align-items: center; justify-content: center; }
+.gallery .wide { grid-column: span 2; }
+@media (max-width: 900px) {
+  .gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .gallery .wide { grid-column: span 2; }
+}
+@media (max-width: 560px) {
+  .gallery { grid-template-columns: 1fr; }
+  .gallery .wide { grid-column: span 1; }
+}
+
+/* ---- packages ---- */
+.pkgs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.pkg {
+  border: 1px solid var(--line); border-radius: 12px;
+  background: var(--paper-2); padding: 26px;
+  display: flex; flex-direction: column; gap: 14px;
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+.pkg:hover { transform: translateY(-3px); box-shadow: var(--shadow); border-color: color-mix(in srgb, var(--copper) 45%, var(--line)); }
+.pkg h3 { font-family: var(--mono); font-size: 19px; font-weight: 600; display: flex; align-items: baseline; gap: 10px; }
+.pkg h3 .v { font-size: 12px; font-weight: 400; color: var(--ink-soft); border: 1px solid var(--line); border-radius: 999px; padding: 1px 9px; }
+.pkg p { font-size: 15px; color: var(--ink-soft); flex: 1; }
+.pkg .code { box-shadow: none; }
+.pkg .code pre { font-size: 12px; padding: 12px 14px; }
+
+/* ---- how it works ---- */
+.pipeline {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0; align-items: stretch;
+  counter-reset: stage;
+  margin: 44px 0 40px;
+}
+.stage {
+  position: relative;
+  border: 1px solid var(--line);
+  border-left: none;
+  background: var(--paper-2);
+  padding: 20px 18px 18px;
+}
+.stage:first-child { border-left: 1px solid var(--line); border-radius: 10px 0 0 10px; }
+.stage:last-child { border-radius: 0 10px 10px 0; }
+.stage::before {
+  counter-increment: stage;
+  content: counter(stage, upper-roman);
+  font-size: 12px; letter-spacing: .18em; color: var(--copper-ink);
+  display: block; margin-bottom: 8px;
+}
+.stage h4 { font-size: 16.5px; font-weight: 600; margin-bottom: 6px; }
+.stage p { font-size: 13.5px; color: var(--ink-soft); line-height: 1.55; }
+.stage .lang {
+  position: absolute; top: 16px; right: 14px;
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em;
+  padding: 2px 8px; border-radius: 999px;
+}
+.lang.rust { background: color-mix(in srgb, var(--copper) 16%, transparent); color: var(--copper-ink); }
+.lang.typst { background: color-mix(in srgb, var(--slate) 16%, transparent); color: var(--slate-ink); }
+@media (max-width: 980px) {
+  .pipeline { grid-template-columns: 1fr; }
+  .stage { border-left: 1px solid var(--line); border-top: none; }
+  .stage:first-child { border-top: 1px solid var(--line); border-radius: 10px 10px 0 0; }
+  .stage:last-child { border-radius: 0 0 10px 10px; }
+}
+.hiw-notes {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px 40px; font-size: 15px; color: var(--ink-soft);
+}
+.hiw-notes b { color: var(--ink); font-weight: 600; }
+.hiw-notes li { margin-left: 18px; padding: 4px 0; }
+
+/* ---- live viewer ---- */
+.live-fig { max-width: 700px; margin: 0 auto; }
+.live-plate { position: relative; }
+.live-plate canvas {
+  display: block; width: 100%; height: auto;
+  aspect-ratio: 604 / 549;
+  cursor: grab;
+  touch-action: pan-y; /* vertical swipes still scroll the page */
+}
+.live-plate canvas.dragging { cursor: grabbing; }
+.live-plate canvas[hidden], .live-plate img[hidden] { display: none; }
+.live-plate img { aspect-ratio: 604 / 549; }
+.live-status {
+  position: absolute; right: 30px; bottom: 26px;
+  font-family: var(--mono); font-size: 12px; letter-spacing: .05em;
+  color: var(--code-ink); background: var(--code-bg);
+  border: 1px solid var(--code-line); border-radius: 999px;
+  padding: 4px 12px;
+  pointer-events: none;
+}
+.live-status::before {
+  content: ""; display: inline-block; width: 7px; height: 7px;
+  border-radius: 50%; background: var(--copper); margin-right: 7px;
+  vertical-align: 1px;
+  animation: live-pulse 1.2s ease-in-out infinite;
+}
+@keyframes live-pulse { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+.live-fig figcaption .live-note { font-style: italic; }
+
+/* ---- footer ---- */
+footer { padding: 64px 0 80px; }
+.foot-grid { display: flex; flex-wrap: wrap; gap: 40px 80px; justify-content: space-between; align-items: flex-start; }
+.foot-brand { font-size: 22px; font-weight: 600; margin-bottom: 8px; }
+.foot-tag { color: var(--ink-soft); font-size: 15px; font-style: italic; max-width: 40ch; }
+.foot-links { display: flex; gap: 60px; flex-wrap: wrap; }
+.foot-links h5 { font-size: 12.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-soft); font-weight: 600; margin-bottom: 12px; }
+.foot-links ul { list-style: none; }
+.foot-links li { padding: 3px 0; font-size: 15px; }
+.colophon {
+  margin-top: 56px; padding-top: 24px; border-top: 1px solid var(--line-soft);
+  font-size: 13.5px; color: var(--ink-soft); font-style: italic;
+  display: flex; flex-wrap: wrap; gap: 8px 24px; justify-content: space-between;
+}
+
+/* ================= responsive ================= */
+@media (max-width: 980px) {
+  .hero-grid { grid-template-columns: minmax(0, 1fr); gap: 44px; padding: 56px 0 64px; }
+  .split { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+  .tab-panel { grid-template-columns: minmax(0, 1fr); }
+  .pkgs { grid-template-columns: minmax(0, 1fr); }
+  .section { padding: 72px 0; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="#top" aria-label="scenery — home">
+      <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true">
+        <line x1="10" y1="21" x2="23" y2="10" stroke="var(--ink-soft)" stroke-width="2.5"/>
+        <circle cx="10" cy="21" r="7" fill="var(--slate)"/>
+        <circle cx="23" cy="10" r="4.5" fill="var(--copper)"/>
+      </svg>
+      scenery
+    </a>
+    <nav class="nav-links" aria-label="Site">
+      <a href="#import">File import</a>
+      <a href="#modes">Render modes</a>
+      <a href="#gallery">Plates</a>
+      <a href="#packages">Packages</a>
+      <a href="#how">How it works</a>
+      <a href="#live">Live</a>
+      <a class="nav-gh" href="https://github.com/GiggleLiu/scenery">GitHub</a>
+      <button id="theme-toggle" aria-label="Toggle color theme" title="Toggle color theme">
+        <span class="moon" aria-hidden="true">&#9789;</span><span class="sun" aria-hidden="true">&#9788;</span>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+<!-- ============ HERO ============ -->
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <p class="eyebrow rise d1">Scientific figures for Typst</p>
+      <h1 class="rise d2">Crystal structures,<br><em>typeset.</em></h1>
+      <p class="pitch rise d3">
+        Describe a crystal the way crystallographers do — a space group, Wyckoff
+        positions, lattice parameters — or point at a real <strong>.xyz&thinsp;/&thinsp;POSCAR&thinsp;/&thinsp;CIF</strong>
+        file. <strong>scenery</strong> expands the symmetry, finds the bonds, and paints a
+        publication-quality 3D figure <strong>entirely inside the Typst compiler</strong>.
+        No Python. No raster step. Native vector output.
+      </p>
+      <div class="cta-row rise d4">
+        <a class="btn btn-primary" href="https://github.com/GiggleLiu/scenery">View on GitHub</a>
+        <a class="btn btn-ghost" href="https://typst.app/universe/package/wyckoff">Typst Universe</a>
+      </div>
+      <div class="hero-code rise d4">
+        <div class="code">
+          <div class="bar">rocksalt.typ</div>
+          <pre><code><span class="tok-k">#import</span> <span class="tok-s">"@preview/wyckoff:0.1.0"</span>: prototypes, crystal
+
+<span class="tok-k">#</span><span class="tok-f">crystal</span>(prototypes.<span class="tok-f">rocksalt</span>(<span class="tok-s">"Na"</span>, <span class="tok-s">"Cl"</span>, a: <span class="tok-n">5.64</span>), width: <span class="tok-n">8cm</span>)</code></pre>
+        </div>
+        <p class="note">Two lines — the complete source of Plate IV below.</p>
+      </div>
+      <div class="stats rise d5">
+        <div class="stat"><div class="n">230</div><div class="l">space groups</div></div>
+        <div class="stat"><div class="n">80</div><div class="l">layer groups</div></div>
+        <div class="stat"><div class="n">3</div><div class="l">packages</div></div>
+        <div class="stat"><div class="n">0</div><div class="l">external tools</div></div>
+      </div>
+    </div>
+    <figure class="fig hero-fig rise d3">
+      <div class="plate">
+        <img src="assets/perovskite.png" width="588" height="533"
+             alt="Ball-and-stick figure of the SrTiO3 perovskite unit cell: large slate-blue strontium spheres at the corners, a gray titanium sphere at the center inside a translucent TiO6 octahedron with copper-colored oxygen atoms, with a legend and an a/b/c axes triad.">
+      </div>
+      <figcaption><span class="pl">Plate I</span> — SrTiO<sub>3</sub> perovskite, space group <i>Pm</i>3&#773;<i>m</i>,
+      with TiO<sub>6</sub> coordination octahedra. Drawn by <code>wyckoff</code> from five Wyckoff sites.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ============ RIBBON ============ -->
+<div class="ribbon">
+  <div class="wrap ribbon-inner">
+    <span class="tag">New</span>
+    <b>File import &amp; molecular rendering</b>
+    <span class="muted">— <code style="font-family:var(--mono);font-size:13.5px">.xyz</code> · extended-xyz · POSCAR · CIF importers,
+    a lattice-free <i>molecule mode</i>, CPK &amp; licorice render styles, and a perspective camera.</span>
+  </div>
+</div>
+
+<!-- ============ FILE IMPORT ============ -->
+<section id="import" class="section">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="eyebrow"><span class="no">§ 01 · </span>From a real file to a figure</p>
+      <h2>Point it at the file you already have.</h2>
+      <p class="lede">
+        Structures rarely start life in a document — they come out of VASP runs, database
+        exports, and geometry optimizers. The bundled <strong>wyckoff-io</strong> parser (Rust, compiled
+        to WASM, shipped inside the package) reads the file and hands wyckoff a clean structure:
+        one import call, one render call, done.
+      </p>
+    </div>
+
+    <div class="tabs">
+      <input type="radio" name="fmt" id="tab-xyz" checked>
+      <input type="radio" name="fmt" id="tab-poscar">
+      <input type="radio" name="fmt" id="tab-cif">
+      <div class="tab-labels" role="tablist" aria-label="Import formats">
+        <label for="tab-xyz">.xyz</label>
+        <label for="tab-poscar">POSCAR</label>
+        <label for="tab-cif">.cif</label>
+      </div>
+      <div class="tab-body">
+
+        <div class="tab-panel" id="panel-xyz">
+          <div class="stack">
+            <div class="code">
+              <div class="bar">water.xyz</div>
+              <pre><code>3
+water molecule
+O   0.000   0.000   0.000
+H   0.757   0.586   0.000
+H  -0.757   0.586   0.000</code></pre>
+            </div>
+            <p class="becomes">becomes</p>
+            <div class="code">
+              <div class="bar">document.typ</div>
+              <pre><code><span class="tok-k">#import</span> <span class="tok-s">"@preview/wyckoff:0.1.0"</span>: import-xyz, molecule
+
+<span class="tok-k">#</span><span class="tok-f">molecule</span>(<span class="tok-f">import-xyz</span>(<span class="tok-s">"water.xyz"</span>))</code></pre>
+            </div>
+          </div>
+          <div class="fig-side">
+            <figure class="fig">
+              <div class="plate">
+                <img src="assets/import-xyz-water.png" width="386" height="150"
+                     alt="Rendered water molecule from the xyz file: a red oxygen sphere bonded to two white hydrogen spheres with two-tone bonds, plus an element legend.">
+              </div>
+              <figcaption><span class="pl">Fig. 1a</span> — a plain <code>.xyz</code> is Cartesian atoms with no
+              lattice, so it renders as a molecule: no cell grid, no crystallographic triad.</figcaption>
+            </figure>
+            <figure class="fig">
+              <div class="plate">
+                <img src="assets/import-extxyz-si.png" width="416" height="337"
+                     alt="Rendered silicon crystal cell from an extended-xyz file: tan silicon spheres on a cubic cell with gray cell edges, legend, and axes triad.">
+              </div>
+              <figcaption><span class="pl">Fig. 1b</span> — extended-xyz with a <code>Lattice="…"</code>
+              header is auto-detected and comes back as a periodic cell instead.</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <div class="tab-panel" id="panel-poscar">
+          <div class="stack">
+            <div class="code">
+              <div class="bar">POSCAR</div>
+              <pre><code>Cu fcc conventional cell
+1.0
+   3.615  0.000  0.000
+   0.000  3.615  0.000
+   0.000  0.000  3.615
+Cu
+4
+Direct
+ 0.0 0.0 0.0
+ 0.0 0.5 0.5
+ 0.5 0.0 0.5
+ 0.5 0.5 0.0</code></pre>
+            </div>
+            <p class="becomes">becomes</p>
+            <div class="code">
+              <div class="bar">document.typ</div>
+              <pre><code><span class="tok-k">#import</span> <span class="tok-s">"@preview/wyckoff:0.1.0"</span>: import-poscar, crystal
+
+<span class="tok-k">#</span><span class="tok-f">crystal</span>(<span class="tok-f">import-poscar</span>(<span class="tok-s">"POSCAR"</span>))</code></pre>
+            </div>
+          </div>
+          <div class="fig-side">
+            <figure class="fig">
+              <div class="plate">
+                <img src="assets/import-poscar-cu.png" width="424" height="337"
+                     alt="Rendered face-centered-cubic copper crystal from a VASP POSCAR file: copper-colored spheres connected by thick bonds inside a cubic cell with legend and axes triad.">
+              </div>
+              <figcaption><span class="pl">Fig. 2</span> — fcc copper straight from a VASP&nbsp;5
+              <code>POSCAR</code>/<code>CONTCAR</code>; Direct and Cartesian coordinate modes both work,
+              scale factor included.</figcaption>
+            </figure>
+            <p class="io-note">Bonds arrive pre-computed by the parser — the same
+            1.15&times;&nbsp;covalent-radius rule as hand-built structures, so imported and
+            authored figures look identical.</p>
+          </div>
+        </div>
+
+        <div class="tab-panel" id="panel-cif">
+          <div class="stack">
+            <div class="code">
+              <div class="bar">nacl.cif</div>
+              <pre><code>data_nacl
+_cell_length_a 5.64
+_cell_length_b 5.64
+_cell_length_c 5.64
+loop_
+_symmetry_equiv_pos_as_xyz
+'x, y, z'
+'z, x, y'
+'-x, -y, -z'
+'x, y+1/2, z+1/2'
+<span class="tok-c"># … the ops the file asserts</span>
+loop_
+_atom_site_label
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+Na1 0.0 0.0 0.0
+Cl1 0.5 0.0 0.0</code></pre>
+            </div>
+            <p class="becomes">becomes</p>
+            <div class="code">
+              <div class="bar">document.typ</div>
+              <pre><code><span class="tok-k">#import</span> <span class="tok-s">"@preview/wyckoff:0.1.0"</span>: import-cif, crystal
+
+<span class="tok-k">#</span><span class="tok-f">crystal</span>(<span class="tok-f">import-cif</span>(<span class="tok-s">"nacl.cif"</span>))</code></pre>
+            </div>
+          </div>
+          <div class="fig-side">
+            <figure class="fig">
+              <div class="plate">
+                <img src="assets/import-cif-nacl.png" width="424" height="337"
+                     alt="Rendered rocksalt NaCl crystal from a CIF file: alternating purple sodium and green chlorine spheres on a cubic lattice with legend and axes triad.">
+              </div>
+              <figcaption><span class="pl">Fig. 3</span> — an explicit
+              <code>_symmetry_equiv_pos_as_xyz</code> loop (the path most database exports take)
+              is applied directly; a bare spacegroup number falls back to wyckoff&rsquo;s own
+              symmetry tables.</figcaption>
+            </figure>
+            <p class="io-note">Files the pragmatic subset can&rsquo;t honor — partial occupancy,
+            multi-block — are rejected with an error that names the unsupported feature,
+            never silently mis-expanded.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ RENDER MODES ============ -->
+<section id="modes" class="section">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="eyebrow"><span class="no">§ 02 · </span>Render modes</p>
+      <h2>One structure, four vocabularies.</h2>
+      <p class="lede">
+        Crystallographers, chemists, and textbook authors draw the same atoms differently.
+        A single <code style="font-family:var(--mono);font-size:15px">mode:</code> argument on
+        <code style="font-family:var(--mono);font-size:15px">crystal()</code> and
+        <code style="font-family:var(--mono);font-size:15px">molecule()</code> switches the whole figure.
+      </p>
+    </div>
+
+    <figure class="fig modes-plate">
+      <div class="plate">
+        <img src="assets/render-modes.png" width="980" height="726"
+             alt="Six-panel comparison: benzene in ball-and-stick, licorice, and space-filling CPK modes on the top row; NaCl in ball-and-stick and space-filling modes plus benzene with single-color gray bonds on the bottom row.">
+      </div>
+      <figcaption><span class="pl">Plate II</span> — benzene and NaCl across the render modes;
+      lower right, the single-color bond option replacing the default two-tone split.</figcaption>
+    </figure>
+
+    <dl class="defs">
+      <div>
+        <dt>"ball-and-stick"</dt>
+        <dd>The default. Covalent-scale balls, two-tone sticks split at the bond midpoint — the Materials&nbsp;Project look.</dd>
+      </div>
+      <div>
+        <dt>"licorice"</dt>
+        <dd>Uniform thin sticks with matching end caps; atom size independent of element. The organic chemist&rsquo;s sketch.</dd>
+      </div>
+      <div>
+        <dt>"space-filling" / "cpk"</dt>
+        <dd>Spheres at the van der Waals radius (Alvarez 2013 table), no bonds — how tightly the electrons actually pack.</dd>
+      </div>
+      <div>
+        <dt>bond-color: luma(110)</dt>
+        <dd>Opt out of the two-tone split and draw each bond as a single stick in any color you name.</dd>
+      </div>
+    </dl>
+  </div>
+</section>
+
+<!-- ============ PERSPECTIVE ============ -->
+<section id="perspective" class="section">
+  <div class="wrap split">
+    <div>
+      <p class="eyebrow"><span class="no">§ 03 · </span>Perspective camera</p>
+      <h2>Depth, when you want it.</h2>
+      <p class="lede">
+        Orthographic projection is the right default for technical figures — parallel lines
+        stay parallel, distances stay comparable. But a large supercell reads better with
+        real foreshortening. Add two keys to the <code style="font-family:var(--mono);font-size:15px">view:</code>
+        dictionary and the camera pulls in; the default stays pixel-identical to earlier releases.
+      </p>
+      <div class="code">
+        <div class="bar">perspective.typ</div>
+        <pre><code><span class="tok-k">#</span><span class="tok-f">crystal</span>(nacl, supercell: (<span class="tok-n">2</span>, <span class="tok-n">2</span>, <span class="tok-n">2</span>), view: (
+  azimuth: <span class="tok-n">25deg</span>, elevation: <span class="tok-n">15deg</span>,
+  mode: <span class="tok-s">"perspective"</span>, distance: <span class="tok-n">18</span>,  <span class="tok-c">// Ångström</span>
+))</code></pre>
+      </div>
+    </div>
+    <figure class="fig">
+      <div class="plate">
+        <img src="assets/perspective.png" width="889" height="364"
+             alt="Side-by-side comparison of the same NaCl supercell rendered with the default orthographic camera and with the perspective camera at distance 18, where nearer atoms appear visibly larger.">
+      </div>
+      <figcaption><span class="pl">Plate III</span> — the same NaCl supercell, orthographic (left)
+      and perspective at <code>distance: 18</code> (right).</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ============ GALLERY ============ -->
+<section id="gallery" class="section">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="eyebrow"><span class="no">§ 04 · </span>Plates</p>
+      <h2>Every figure here is real output.</h2>
+      <p class="lede">
+        Nothing staged, nothing retouched — each plate below is compiled from a short
+        <code style="font-family:var(--mono);font-size:15px">.typ</code> source in the repository&rsquo;s
+        <a href="https://github.com/GiggleLiu/scenery">examples</a>, rebuilt by CI on every push.
+      </p>
+    </div>
+    <div class="gallery">
+      <figure class="fig">
+        <div class="plate">
+          <img src="assets/nacl.png" width="594" height="533" loading="lazy"
+               alt="NaCl rocksalt structure with large blue sodium and smaller copper-toned chlorine spheres joined by two-tone bonds, legend and axes triad.">
+        </div>
+        <figcaption><span class="pl">Plate IV</span> — NaCl, rocksalt, <i>Fm</i>3&#773;<i>m</i>. The two-line hero snippet.</figcaption>
+      </figure>
+      <figure class="fig">
+        <div class="plate">
+          <img src="assets/diamond.png" width="584" height="531" loading="lazy"
+               alt="Diamond cubic carbon structure: gray spheres in a tetrahedral bond network inside a wireframe cubic cell.">
+        </div>
+        <figcaption><span class="pl">Plate V</span> — diamond, <i>Fd</i>3&#773;<i>m</i>, origin choice 2: the 8a site at (&#8539;,&#8539;,&#8539;).</figcaption>
+      </figure>
+      <figure class="fig">
+        <div class="plate">
+          <img src="assets/mos2.png" width="716" height="532" loading="lazy"
+               alt="MoS2 monolayer viewed at an angle: blue molybdenum and copper-toned sulfur atoms on a hexagonal 2D lattice with a flat cell grid.">
+        </div>
+        <figcaption><span class="pl">Plate VI</span> — MoS<sub>2</sub> monolayer from layer group <i>p</i>6&#773;<i>m</i>2, one of 80 supported layer groups.</figcaption>
+      </figure>
+      <figure class="fig">
+        <div class="plate">
+          <img src="assets/c60.png" width="358" height="335" loading="lazy"
+               alt="C60 fullerene cage of 60 gray-blue carbon atoms and 90 bonds forming pentagons and hexagons.">
+        </div>
+        <figcaption><span class="pl">Plate VII</span> — C<sub>60</sub> fullerene: 60 atoms, 90 bonds, generated in pure Typst.</figcaption>
+      </figure>
+      <figure class="fig">
+        <div class="plate">
+          <img src="assets/scenery-hero.png" width="711" height="999" loading="lazy"
+               alt="Double-helix scene of blue and copper spheres connected by rungs colored by a scalar value, with a legend and a vertical colorbar from 0 to 7.44.">
+        </div>
+        <figcaption><span class="pl">Plate VIII</span> — the <code>scenery</code> core composite: named anchors, legend, colorbar, axes triad.</figcaption>
+      </figure>
+      <figure class="fig">
+        <div class="plate">
+          <img src="assets/fcc-bz.png" width="409" height="380" loading="lazy"
+               alt="First Brillouin zone of the fcc lattice, a translucent blue truncated octahedron with the high-symmetry k-path Gamma-X-W-K-Gamma-L traced in red and labelled.">
+        </div>
+        <figcaption><span class="pl">Plate IX</span> — fcc Brillouin zone with the Setyawan–Curtarolo &Gamma;–X–W–K–&Gamma;–L path (<code>brillouin</code>).</figcaption>
+      </figure>
+      <figure class="fig wide">
+        <div class="plate">
+          <img src="assets/bz-band.png" width="766" height="315" loading="lazy"
+               alt="A Brillouin zone polyhedron beside a band-structure panel showing three tight-binding bands plotted along the high-symmetry path with labelled ticks.">
+        </div>
+        <figcaption><span class="pl">Plate X</span> — zone beside a band panel: tight-binding bands along the k-path, ticks placed automatically.</figcaption>
+      </figure>
+      <figure class="fig">
+        <div class="plate">
+          <img src="assets/solids.png" width="808" height="377" loading="lazy"
+               alt="Row of parametric solids in slate blue: a UV sphere, cylinder, cone, triangular prism, and a convex-hull icosahedron.">
+        </div>
+        <figcaption><span class="pl">Plate XI</span> — parametric solids and a convex-hull icosahedron from the shape generators.</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PACKAGES ============ -->
+<section id="packages" class="section">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="eyebrow"><span class="no">§ 05 · </span>The family</p>
+      <h2>Three packages, one scene core.</h2>
+      <p class="lede">
+        Every package speaks the same typed-primitive language and renders through the same
+        depth-sorted painter — so figures from different packages share themes, cameras,
+        and composition inside one CeTZ canvas.
+      </p>
+    </div>
+    <div class="pkgs">
+      <article class="pkg">
+        <h3>scenery <span class="v">0.1.0</span></h3>
+        <p>The shared 2D/3D scene core — Typst&rsquo;s first programmatic 3D API. Typed primitives,
+        named anchors, cameras, occlusion, themes, legends and colorbars.</p>
+        <div class="code"><pre><code><span class="tok-k">#import</span> <span class="tok-s">"@preview/scenery:0.1.0"</span>:
+  build-scene, sphere, seg, camera, render-scene
+
+<span class="tok-k">#let</span> scene = <span class="tok-f">build-scene</span>(
+  <span class="tok-f">sphere</span>((<span class="tok-n">0</span>,<span class="tok-n">0</span>,<span class="tok-n">0</span>), <span class="tok-n">0.6</span>),
+  <span class="tok-f">sphere</span>((<span class="tok-n">2</span>,<span class="tok-n">0</span>,<span class="tok-n">0</span>), <span class="tok-n">0.6</span>, color: <span class="tok-f">rgb</span>(<span class="tok-s">"#dd8452"</span>)),
+  <span class="tok-f">seg</span>((<span class="tok-n">0</span>,<span class="tok-n">0</span>,<span class="tok-n">0</span>), (<span class="tok-n">2</span>,<span class="tok-n">0</span>,<span class="tok-n">0</span>)),
+)
+<span class="tok-k">#</span><span class="tok-f">render-scene</span>(scene,
+  <span class="tok-f">camera</span>(azimuth: <span class="tok-n">30deg</span>, elevation: <span class="tok-n">20deg</span>),
+  width: <span class="tok-n">5cm</span>)</code></pre></div>
+      </article>
+      <article class="pkg">
+        <h3>wyckoff <span class="v">0.1.0</span></h3>
+        <p>Materials-Project-style crystal figures from space groups, layer groups and Wyckoff
+        positions — plus molecules and file import. Symmetry tables cross-validated against pymatgen.</p>
+        <div class="code"><pre><code><span class="tok-c">// Rutile TiO2 from its asymmetric unit</span>
+<span class="tok-k">#</span><span class="tok-f">crystal</span>(<span class="tok-f">structure</span>(
+  spacegroup: <span class="tok-n">136</span>,
+  lattice: (a: <span class="tok-n">4.594</span>, c: <span class="tok-n">2.959</span>),
+  sites: (
+    (element: <span class="tok-s">"Ti"</span>, wyckoff: <span class="tok-s">"a"</span>),
+    (element: <span class="tok-s">"O"</span>,  wyckoff: <span class="tok-s">"f"</span>, x: <span class="tok-n">0.305</span>),
+  ),
+))</code></pre></div>
+      </article>
+      <article class="pkg">
+        <h3>brillouin <span class="v">0.1.0</span></h3>
+        <p>The reciprocal-space companion: Wigner–Seitz zones, HPKOT-labelled high-symmetry
+        k-paths, and band-path panels for your dispersion data.</p>
+        <div class="code"><pre><code><span class="tok-k">#import</span> <span class="tok-s">"@preview/brillouin:0.1.0"</span>: bz-figure
+
+<span class="tok-k">#</span><span class="tok-f">bz-figure</span>((a: <span class="tok-n">3.61</span>), bravais: <span class="tok-s">"cF"</span>,
+  path: (<span class="tok-s">"Γ"</span>, <span class="tok-s">"X"</span>, <span class="tok-s">"W"</span>, <span class="tok-s">"K"</span>, <span class="tok-s">"Γ"</span>, <span class="tok-s">"L"</span>),
+  width: <span class="tok-n">8cm</span>)</code></pre></div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============ HOW IT WORKS ============ -->
+<section id="how" class="section">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="eyebrow"><span class="no">§ 06 · </span>How it works</p>
+      <h2>Rust where throughput bites,<br>Typst where the science lives.</h2>
+      <p class="lede">
+        A deliberate boundary: the WASM plugin does throughput-bound text and geometry; Typst
+        keeps the validated crystallography and every styling decision. The prebuilt
+        <code style="font-family:var(--mono);font-size:15px">.wasm</code> ships inside the package —
+        end users never need a Rust toolchain.
+      </p>
+    </div>
+
+    <div class="pipeline">
+      <div class="stage">
+        <h4>File bytes</h4>
+        <p><code style="font-family:var(--mono);font-size:12.5px">.xyz</code> · extended-xyz ·
+        POSCAR · CIF. Typst reads the file; the plugin never touches disk.</p>
+      </div>
+      <div class="stage"><span class="lang rust">rust · wasm</span>
+        <h4>wyckoff-io</h4>
+        <p>Real parsers with real errors. CIF symmetry-op loops applied directly; bonds
+        auto-detected. Freestanding <code style="font-family:var(--mono);font-size:12.5px">wasm32</code> — deterministic, no I/O.</p>
+      </div>
+      <div class="stage">
+        <h4>Normalized record</h4>
+        <p>One JSON schema for every format: lattice, Cartesian atoms, optional spacegroup +
+        asymmetric unit, bonds. Golden-file fixtures stay human-reviewable.</p>
+      </div>
+      <div class="stage"><span class="lang typst">typst</span>
+        <h4>wyckoff</h4>
+        <p>Symmetry expansion through pyxtal-generated, pymatgen-cross-validated tables;
+        molecule mode; bond rules; render-mode selection.</p>
+      </div>
+      <div class="stage"><span class="lang typst">typst</span>
+        <h4>scenery &rarr; CeTZ</h4>
+        <p>Projection, occlusion, painter&rsquo;s depth sort, gradient shading, themes — pure
+        vector output on the page.</p>
+      </div>
+    </div>
+
+    <ul class="hiw-notes">
+      <li><b>Host-agnostic core.</b> The crates assume nothing about Typst — bytes in,
+      structured geometry out — so the same <code style="font-family:var(--mono);font-size:13px">.wasm</code>
+      could power a standalone web viewer later.</li>
+      <li><b>Reproducible by construction.</b> The toolchain is pinned and CI rebuilds the
+      committed <code style="font-family:var(--mono);font-size:13px">.wasm</code> from source and diffs
+      it — a binary a reviewer can regenerate is a binary a reviewer can trust.</li>
+      <li><b>No split-brain crystallography.</b> Table-based symmetry expansion stays in Typst,
+      cross-validated against pymatgen; Rust only applies operations a file itself asserts.</li>
+      <li><b>Pure Typst remains first-class.</b> Hand-built structures never touch WASM; the
+      compiler-only path is the default and the fallback, on typst.app and in CI alike.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ LIVE ============ -->
+<section id="live" class="section">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="eyebrow"><span class="no">§ 07 · </span>The engine, live</p>
+      <h2>Not a video. The actual WASM,<br>rotating in your browser.</h2>
+      <p class="lede">
+        §&thinsp;06 said the same <code style="font-family:var(--mono);font-size:15px">.wasm</code>
+        could power a standalone web viewer. Here it is: this page fetches the
+        <strong>byte-identical plugin binary</strong> Typst loads, instantiates it in
+        JavaScript, and calls it again on every frame you drag — depth sort, occlusion
+        clipping, BSP face splits, all computed in the engine. The canvas only paints
+        what comes back.
+      </p>
+    </div>
+
+    <figure class="fig live-fig">
+      <div class="plate live-plate">
+        <img id="live-fallback" src="assets/perovskite.png" width="604" height="549" loading="lazy"
+             alt="Ball-and-stick figure of the SrTiO3 perovskite unit cell: large slate-blue strontium spheres at the corners, a gray titanium sphere at the center inside a translucent TiO6 octahedron with copper-colored oxygen atoms.">
+        <canvas id="live-canvas" role="img" hidden
+                aria-label="Interactive 3D model of the SrTiO3 perovskite unit cell, depth-sorted live by the scenery WASM engine. Drag to rotate."></canvas>
+        <p class="live-status" id="live-status" aria-hidden="true" hidden>waking the engine</p>
+      </div>
+      <figcaption><span class="pl">Plate XII</span> — SrTiO<sub>3</sub> once more, but alive:
+      the same five Wyckoff sites, re-sorted by the plugin binary on every frame.
+      <span class="live-note" id="live-version"></span></figcaption>
+    </figure>
+  </div>
+</section>
+
+</main>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <div class="foot-brand">scenery</div>
+        <p class="foot-tag">Scientific visualization for Typst — described as data,
+        painted as vectors, versioned like code.</p>
+      </div>
+      <div class="foot-links">
+        <div>
+          <h5>Project</h5>
+          <ul>
+            <li><a href="https://github.com/GiggleLiu/scenery">GitHub repository</a></li>
+            <li><a href="https://github.com/GiggleLiu/scenery/releases/latest/download/scenery-manual.pdf">Manual (PDF)</a></li>
+            <li><a href="https://github.com/GiggleLiu/scenery/issues/17">Roadmap</a></li>
+          </ul>
+        </div>
+        <div>
+          <h5>Typst Universe</h5>
+          <ul>
+            <li><a href="https://typst.app/universe/package/scenery">scenery</a></li>
+            <li><a href="https://typst.app/universe/package/wyckoff">wyckoff</a></li>
+            <li><a href="https://typst.app/universe/package/brillouin">brillouin</a></li>
+          </ul>
+        </div>
+        <div>
+          <h5>Ecosystem</h5>
+          <ul>
+            <li><a href="https://typst.app">Typst</a></li>
+            <li><a href="https://typst.app/universe/package/cetz">CeTZ</a></li>
+            <li><a href="https://github.com/deepmodeling/CrystalFormer">CrystalFormer</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="colophon">
+      <span>MIT licensed. Every figure on this page is unedited package output, rebuilt by CI.</span>
+      <span>Set in the fonts your system already trusts.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    var btn = document.getElementById("theme-toggle");
+    btn.addEventListener("click", function () {
+      var root = document.documentElement;
+      var systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      var current = root.dataset.theme || (systemDark ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      root.dataset.theme = next;
+      try { localStorage.setItem("scenery-theme", next); } catch (e) {}
+    });
+  })();
+</script>
+<script type="module" src="js/render.js"></script>
+
+</body>
+</html>

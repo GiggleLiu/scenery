@@ -2,7 +2,7 @@
 #import "/src/shape.typ": uv-sphere, cylinder
 #import "/src/camera.typ": camera
 #import "/src/style.typ": default-theme
-#import "/src/render.typ": sort-prims, scene-group, render-scene, _sphere-fill, _clip-lines, _prepare-faces, _record
+#import "/src/render.typ": sort-prims, scene-group, render-scene, _sphere-fill, _sphere-gradient, _clip-lines, _prepare-faces, _record, _projected-sphere
 #import "@preview/cetz:0.5.2"
 
 // A camera with azimuth = elevation = 0 projects (x, y, z) to
@@ -48,6 +48,29 @@
   message: "shuffled input sorted differently: "
     + repr(sort-prims(shuffled.prims, cam0).map(p => p.kind)),
 )
+
+// --- selectable depth key for intersecting primitives ----------------------
+// A coordination face can overlap an opaque ligand sphere. Its centroid can be
+// nearer than the sphere even though one vertex extends behind it, causing the
+// whole translucent triangle to overpaint the atom. `back` anchors the face at
+// its farthest support point; `front` provides the dual policy. The default
+// remains the historical centroid key.
+#let shared-sphere = sphere((0, 0, 0), 1)
+#let crossing-default = face(((-1, -2, -1), (1, 2, -1), (0, 2, 1)))
+#let crossing-back = face(crossing-default.pts, depth-key: "back")
+#let crossing-front = face(crossing-default.pts, depth-key: "front")
+#assert.eq(sort-prims((shared-sphere, crossing-default), cam0).map(p => p.kind), ("sphere", "face"))
+#assert.eq(sort-prims((shared-sphere, crossing-back), cam0).map(p => p.kind), ("face", "sphere"))
+#assert.eq(sort-prims((shared-sphere, crossing-front), cam0).map(p => p.kind), ("sphere", "face"))
+#assert.eq(sort-prims((crossing-back,), cam0).first().depth, -2)
+#assert.eq(sort-prims((crossing-front,), cam0).first().depth, 2)
+
+// Exact shared support points still tie: stable input order decides which one
+// paints last. Callers that need a guaranteed order at a shared vertex must add
+// a small depth offset (the Wyckoff polyhedron builder does this).
+#let tied-face = face(((0, 0, 0), (1, 2, -1), (0, 2, 1)), depth-key: "back")
+#assert.eq(sort-prims((shared-sphere, tied-face), cam0).map(p => p.kind), ("sphere", "face"))
+#assert.eq(sort-prims((tied-face, shared-sphere), cam0).map(p => p.kind), ("face", "sphere"))
 
 // --- labels always paint last (on top) ---------------------------------------
 // A label keeps the +1e9 depth key even against a very near sphere.
@@ -264,6 +287,48 @@
   _sphere-fill(col) != white.mix((col, 75%)),
   message: "sphere fill regressed to the white.mix(..) mis-weighting",
 )
+
+// --- sphere gradient: specular stop (issue #30) --------------------------------
+// specular: false must reproduce the classic pre-specular gradient EXACTLY —
+// the graceful-degradation opt-out the M4 design doc requires.
+// NOTE: whole-gradient `==` is unreliable in Typst 0.14.2 (identically
+// constructed gradients compare unequal), so the pin compares componentwise:
+// stops, center, and radius — together these are the full radial constructor.
+#let classic = gradient.radial(
+  (color.mix((white, 70%), (col, 30%)), 0%),
+  (_sphere-fill(col), 25%),
+  (col, 55%),
+  (col.darken(30%), 100%),
+  center: (35%, 30%),
+  radius: 110%,
+)
+#let no-spec = _sphere-gradient(col, specular: false)
+#assert.eq(no-spec.stops(), classic.stops(),
+  message: "specular: false must have the exact classic gradient stops")
+#assert.eq(no-spec.center(), classic.center(),
+  message: "specular: false must keep the classic gradient center")
+#assert.eq(no-spec.radius(), classic.radius(),
+  message: "specular: false must keep the classic gradient radius")
+// The default gradient gains the specular core: five stops, a first stop
+// strictly lighter than the classic highlight, and the issue-#8 mid-tone
+// _sphere-fill(col) still present as a stop.
+#let spec-stops = _sphere-gradient(col).stops()
+#assert.eq(spec-stops.len(), 5, message: "specular gradient has five stops")
+#assert.eq(spec-stops.first().at(0), color.mix((white, 92%), (col, 8%)))
+#assert(spec-stops.map(s => s.at(0)).contains(_sphere-fill(col)),
+  message: "the issue-#8 mid-tone must survive as a stop of the new gradient")
+#assert(spec-stops != no-spec.stops(),
+  message: "default gradient must actually differ (the repaint is intended)")
+
+// --- perspective: projected sphere radius scales with depth -------------------
+#let pcam = camera(azimuth: 0deg, elevation: 0deg, mode: "perspective", distance: 10)
+#let near-sp = _projected-sphere((kind: "sphere", center: (0, 5, 0), r: 1.0), pcam)
+#assert(calc.abs(near-sp.r - 2.0) < 1e-9, message: "near sphere silhouette doubles")
+#let far-sp = _projected-sphere((kind: "sphere", center: (0, -10, 0), r: 1.0), pcam)
+#assert(calc.abs(far-sp.r - 0.5) < 1e-9, message: "far sphere silhouette halves")
+#assert(near-sp.r > far-sp.r, message: "nearer sphere must project larger")
+// negative control: the orthographic occluder radius is untouched
+#assert.eq(_projected-sphere((kind: "sphere", center: (0, 5, 0), r: 1.0), cam0).r, 1.0)
 
 Render sort OK
 

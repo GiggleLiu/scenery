@@ -14,7 +14,7 @@
 //     `_sphere-fill` is the guarded, pure helper carrying that weighting.
 
 #import "@preview/cetz:0.5.2"
-#import "camera.typ": project
+#import "camera.typ": project, project-scale
 #import "linalg.typ": vadd, vsub, vscale, vdot, vcross, vlen
 #import "style.typ": default-theme, resolve-style, face-brightness
 #import "anchors.typ": resolve-scene
@@ -31,20 +31,38 @@
 /// -> color
 #let _sphere-fill(col) = color.mix((white, 25%), (col, 75%))
 
-/// Radial "3D ball" gradient for a sphere of base colour `col`: a bright
-/// highlight up-left of centre fading through the `_sphere-fill` body and the
-/// base colour to a darkened rim.
+/// Radial "3D ball" gradient for a sphere of base colour `col`. With
+/// `specular: true` (the default): a tight near-white specular core fading
+/// through the classic highlight and the `_sphere-fill` body tint to a
+/// darkened rim. `specular: false` reproduces the pre-specular four-stop
+/// gradient exactly (the classic look, selectable per sphere or per theme via
+/// the `specular` style hook). The sphere's thin outline is separate: the
+/// theme's `stroke-width`/`stroke-darken` hooks on the drawn circle.
 ///
 /// - col (color): The sphere's base colour.
+/// - specular (bool): Add the specular highlight stop (default) or keep the
+///   classic gradient.
 /// -> gradient
-#let _sphere-gradient(col) = gradient.radial(
-  (color.mix((white, 70%), (col, 30%)), 0%),
-  (_sphere-fill(col), 25%),
-  (col, 55%),
-  (col.darken(30%), 100%),
-  center: (35%, 30%),
-  radius: 110%,
-)
+#let _sphere-gradient(col, specular: true) = if specular {
+  gradient.radial(
+    (color.mix((white, 92%), (col, 8%)), 0%),
+    (color.mix((white, 70%), (col, 30%)), 12%),
+    (_sphere-fill(col), 30%),
+    (col, 58%),
+    (col.darken(35%), 100%),
+    center: (35%, 30%),
+    radius: 110%,
+  )
+} else {
+  gradient.radial(
+    (color.mix((white, 70%), (col, 30%)), 0%),
+    (_sphere-fill(col), 25%),
+    (col, 55%),
+    (col.darken(30%), 100%),
+    center: (35%, 30%),
+    radius: 110%,
+  )
+}
 
 // --- depth sorting (pure) ---------------------------------------------------
 
@@ -62,6 +80,32 @@
   else if k == "arrow" { _mid(p.from, p.to) }
   else if k == "face" { _centroid(p.pts) }
   else { p.center } // unreachable: labels/meshes handled before this
+}
+
+// Geometry support points used by the opt-in back/front depth policies.
+#let _depth-support(p) = {
+  let k = p.kind
+  if k == "sphere" { (p.center,) }
+  else if k == "seg" or k == "edge" { (p.a, p.b) }
+  else if k == "arrow" { (p.from, p.to) }
+  else if k == "face" { p.pts }
+  else { (p.at,) }
+}
+
+// Scalar painter key for one already-exploded primitive. `center` is the
+// historical centre/midpoint/centroid rule; back/front anchor at the farthest
+// or nearest support point when intersecting geometry needs a conservative
+// draw order (notably coordination faces meeting opaque ligand spheres).
+#let _primitive-depth(p, camera) = {
+  let key = p.at("depth-key", default: "center")
+  assert(
+    key in ("center", "back", "front"),
+    message: "depth-key must be \"center\", \"back\", or \"front\"; got " + repr(key),
+  )
+  if p.kind == "label" { return 1e9 }
+  if key == "center" { return project(camera, _depth-point(p)).depth }
+  let depths = _depth-support(p).map(q => project(camera, q).depth)
+  if key == "back" { calc.min(..depths) } else { calc.max(..depths) }
 }
 
 /// Explodes any `mesh` primitive into one `face` primitive per mesh face,
@@ -212,9 +256,15 @@
 // orthographic camera. Behind the centre plane, the whole projected disk hides
 // the line. In front of that plane, only the part inside the actual sphere is
 // hidden; a line nearer than the sphere's front surface remains visible.
+// Under a perspective camera the projected disk uses the depth-scaled radius
+// (via _projected-sphere); the front-hemisphere refinement mixes screen units
+// with view depth and is exact for orthographic, approximate (conservative)
+// for mild perspective.
 #let _projected-sphere(sp, camera) = {
   let p = project(camera, sp.center)
-  (sx: p.sx, sy: p.sy, depth: p.depth, r: sp.r)
+  // Screen-space occluder disk. Under perspective a sphere's silhouette radius
+  // depends on its depth; project-scale is exactly 1.0 for orthographic/2d.
+  (sx: p.sx, sy: p.sy, depth: p.depth, r: sp.r * project-scale(camera, p.depth))
 }
 
 #let _overlap1(a0, a1, b0, b1) = calc.min(a0, a1) <= calc.max(b0, b1) and calc.max(a0, a1) >= calc.min(b0, b1)
@@ -462,9 +512,11 @@
 
 /// Depth-sorts scene primitives back-to-front for painter's-algorithm drawing.
 ///
-/// Pure — no cetz. Each primitive gets a scalar depth key from `camera`:
-/// spheres use their centre, seg/edge/arrow their midpoint, faces their
-/// centroid, and labels a huge constant so they always paint last (on top).
+/// Pure — no cetz. By default each primitive gets a scalar depth key from
+/// `camera`: spheres use their centre, seg/edge/arrow their midpoint, faces
+/// their centroid, and labels a huge constant so they always paint last (on
+/// top). A primitive can opt into `depth-key: "back"` or `"front"` to use its
+/// farthest or nearest support point instead.
 /// Meshes are first exploded into per-face `face` primitives, each keyed by its
 /// own centroid, so a single mesh's faces sort independently. Depth grows toward
 /// the viewer, so ascending order is far-to-near.
@@ -474,10 +526,7 @@
 /// -> array
 #let sort-prims(prims, camera) = {
   let keyed = _explode(prims).map(p => {
-    let depth = if p.kind == "label" { 1e9 } else {
-      project(camera, _depth-point(p)).depth
-    }
-    (..p, depth: depth)
+    (..p, depth: _primitive-depth(p, camera))
   })
   keyed.sorted(key: p => p.depth)
 }
@@ -512,11 +561,13 @@
   let st = resolve-style(theme, p)
   let k = p.kind
   if k == "sphere" {
+    let q = project(camera, p.center)
     (
       kind: k,
-      pos: _screen(camera, unit, p.center),
-      radius: p.r * unit,
+      pos: (q.sx * unit, q.sy * unit),
+      radius: p.r * project-scale(camera, q.depth) * unit,
       color: st.color,
+      specular: st.at("specular", default: true),
       stroke: (paint: st.color.darken(st.stroke-darken), thickness: st.stroke-width),
     )
   } else if k == "seg" {
@@ -524,7 +575,11 @@
       kind: k,
       a: _screen(camera, unit, p.a),
       b: _screen(camera, unit, p.b),
-      stroke: (paint: st.color, thickness: st.w * unit * 1cm, cap: "round"),
+      stroke: (
+        paint: st.color,
+        thickness: st.w * project-scale(camera, project(camera, _mid(p.a, p.b)).depth) * unit * 1cm,
+        cap: "round",
+      ),
     )
   } else if k == "edge" {
     (
@@ -534,13 +589,14 @@
       stroke: (paint: st.color, thickness: st.width),
     )
   } else if k == "arrow" {
+    let wsc = project-scale(camera, project(camera, _mid(p.from, p.to)).depth)
     (
       kind: k,
       a: _screen(camera, unit, p.from),
       b: _screen(camera, unit, p.to),
-      stroke: (paint: st.color, thickness: st.w * unit * 1cm, cap: "round"),
+      stroke: (paint: st.color, thickness: st.w * wsc * unit * 1cm, cap: "round"),
       mark: if p.at("draw-head", default: true) {
-        (end: st.head, fill: st.color, scale: st.head-scale * st.w * unit)
+        (end: st.head, fill: st.color, scale: st.head-scale * st.w * wsc * unit)
       } else { none },
     )
   } else if k == "face" {
@@ -627,12 +683,35 @@
   legend: none,
   colorbar: none,
   register-anchors: true,
+  engine: "typst",
+  engine-cull: none,
 ) = {
+  assert(
+    engine in ("typst", "wasm"),
+    message: "scenery: engine must be \"typst\" or \"wasm\", got " + repr(engine),
+  )
   let scene = resolve-scene(scene, camera)
   // All geometry resolved to plain data before the wildcard import, so the loop
   // below cannot be tripped by cetz re-exporting `project`/`scale`.
-  let records = sort-prims(_clip-lines(scene.prims, camera, theme: theme), camera)
-    .map(p => _record(camera, unit, theme, p))
+  //
+  // `engine: "wasm"` (opt-in) delegates only the depth-sort + line-clipping to
+  // the scenery-engine WASM plugin; the `import` is scoped to this branch so the
+  // default pure-Typst path never loads the blob. Styling stays Typst-side:
+  // `engine-sort` returns draw-ordered geometry records keyed back to the
+  // original styled primitives, so `_record` reassembles colour/gradient/theme
+  // by primitive exactly as the pure path does.
+  let ordered = if engine == "wasm" {
+    import "engine.typ": engine-sort
+    engine-sort(
+      _prepare-faces(scene.prims, camera, theme: theme),
+      camera,
+      theme: theme,
+      cull: engine-cull,
+    )
+  } else {
+    sort-prims(_clip-lines(scene.prims, camera, theme: theme), camera)
+  }
+  let records = ordered.map(p => _record(camera, unit, theme, p))
   // Annotation placement, in canvas coords (screen projection times `unit`).
   let sb = _projected-screen-bbox(camera, scene.bbox)
   let (x0, y0, x1, y1) = (sb.at(0) * unit, sb.at(1) * unit, sb.at(2) * unit, sb.at(3) * unit)
@@ -651,7 +730,7 @@
   }
   for r in records {
     if r.kind == "sphere" {
-      circle(r.pos, radius: r.radius, fill: _sphere-gradient(r.color), stroke: r.stroke)
+      circle(r.pos, radius: r.radius, fill: _sphere-gradient(r.color, specular: r.specular), stroke: r.stroke)
     } else if r.kind == "seg" or r.kind == "edge" {
       line(r.a, r.b, stroke: r.stroke)
     } else if r.kind == "arrow" {
@@ -722,6 +801,8 @@
   axes: none,
   legend: none,
   colorbar: none,
+  engine: "typst",
+  engine-cull: none,
 ) = {
   let scene = resolve-scene(scene, camera)
   let w = _projected-width(camera, scene.bbox)
@@ -735,5 +816,7 @@
     legend: legend,
     colorbar: colorbar,
     register-anchors: false,
+    engine: engine,
+    engine-cull: engine-cull,
   ))
 }

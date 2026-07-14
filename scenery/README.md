@@ -16,7 +16,8 @@ Programmatic 3D (and 2D) scenes for [Typst](https://typst.app) — the missing 3
 <td align="center"><a href="examples/hero.typ"><img src="images/hero.png" width="380"></a><br>Composite hero scene — axes triad, legend, colorbar</td>
 </tr>
 <tr>
-<td align="center" colspan="2"><a href="examples/visibility.typ"><img src="images/visibility.png" width="520"></a><br>Visibility regression — an arrow correctly clipped by an opaque plane and sphere</td>
+<td align="center"><a href="examples/visibility.typ"><img src="images/visibility.png" width="380"></a><br>Visibility regression — an arrow correctly clipped by an opaque plane and sphere</td>
+<td align="center"><a href="examples/c60.typ"><img src="images/c60.png" width="380"></a><br>Idealized C<sub>60</sub> fullerene — 60 atoms and 90 bonds generated in Typst</td>
 </tr>
 </table>
 
@@ -73,7 +74,7 @@ Inside a shared `cetz.canvas`, `scene-group` registers these logical anchors wit
 
 ## How it works
 
-A scene is a flat array of typed primitives — plain dictionaries tagged by `kind`, e.g. `(kind: "sphere", center: (0,0,0), r: 0.6)`. Nothing in the data model touches CeTZ. At render time named coordinates are resolved for the selected camera, then each primitive is projected orthographically. Segments, edges, and arrows are split at opaque sphere silhouettes and planar face boundaries; intervals genuinely hidden by an opaque object are removed. Opaque meshes cull rear faces by default, while translucent meshes retain both sides with quieter rear strokes. The remaining primitives are keyed by camera depth (spheres by centre, line fragments by midpoint, faces by centroid), sorted far-to-near, and drawn. Spheres use radial-gradient shading, faces are flat-shaded from one world light, and labels stay on top. Styling is a pure three-layer merge — theme defaults, per-kind block, then each primitive's own hooks — so colours and widths are just named arguments on the constructors.
+A scene is a flat array of typed primitives — plain dictionaries tagged by `kind`, e.g. `(kind: "sphere", center: (0,0,0), r: 0.6)`. Nothing in the data model touches CeTZ. At render time named coordinates are resolved for the selected camera, then each primitive is projected orthographically. Segments, edges, and arrows are split at opaque sphere silhouettes and planar face boundaries; intervals genuinely hidden by an opaque object are removed. Opaque meshes cull rear faces by default, while translucent meshes retain both sides with quieter rear strokes. The remaining primitives are keyed by camera depth (spheres by centre, line fragments by midpoint, faces by centroid), sorted far-to-near, and drawn. For intersecting geometry, `depth-key: "back"` or `"front"` anchors a primitive at its farthest or nearest support point instead of the default centre key. Spheres use radial-gradient shading, faces are flat-shaded from one world light, and labels stay on top. Styling is a pure three-layer merge — theme defaults, per-kind block, then each primitive's own hooks — so colours and widths are just named arguments on the constructors.
 
 ## API reference
 
@@ -87,7 +88,7 @@ Grouped by source module; every name below is exported from the package root.
 | `seg(a, b, name:, ..style)` | Thick round-capped segment (e.g. a bond); width `w` in scene units. |
 | `edge(a, b, name:, ..style)` | Thin wireframe edge (absolute stroke width). |
 | `arrow(from, to, name:, ..style)` | Arrow with a scaled head (`head`, `w`). |
-| `face(pts, name:, ..style)` | Filled planar polygon; `fill-opacity` and optional `cull` visibility policy. |
+| `face(pts, name:, ..style)` | Filled planar polygon; `fill-opacity`, optional `cull`, and `depth-key` (`"center"`/`"back"`/`"front"`). |
 | `mesh(vertices, faces, name:, ..style)` | Indexed polygon mesh; adaptive back-face culling, `cull`, and `hidden-stroke`. |
 | `label(at, text, name:, ..style)` | Text at a 3D point; `text-anchor` controls alignment. |
 | `build-scene(..prims)` | Flattens primitives/groups and validates object names. |

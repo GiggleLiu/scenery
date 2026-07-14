@@ -35,6 +35,7 @@
     color: luma(185),
     stroke-darken: 45%,
     stroke-width: 0.5pt,
+    specular: true, // specular highlight stop in the ball gradient (issue #30)
   ),
   seg: (
     color: luma(90),
@@ -70,7 +71,7 @@
 #let _STRUCT = (
   "kind", "name", "anchor", "center", "r", "a", "b", "from", "to", "pts",
   "vertices", "faces", "at", "text", "depth", "mesh-face", "mesh-center",
-  "rear-face", "draw-head",
+  "rear-face", "draw-head", "depth-key",
 )
 
 /// The styling hooks on a primitive: its named fields minus structural geometry.

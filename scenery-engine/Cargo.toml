@@ -1,0 +1,15 @@
+[package]
+name = "scenery-engine"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Host-agnostic projection, depth-sort, and BSP splitting for the scenery Typst package"
+repository = "https://github.com/GiggleLiu/scenery"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-minimal-protocol = "0.1"
+serde = { version = "1", features = ["derive"] }
+ciborium = "0.2"

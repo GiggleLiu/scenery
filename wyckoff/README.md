@@ -80,6 +80,40 @@ When you already have expanded coordinates, skip symmetry entirely: pass three l
 ))
 ```
 
+### Importing from files
+
+`import-xyz(path)` reads an `.xyz` or extended-xyz file (parsed by the bundled
+`wyckoff-io` WASM plugin) and returns a renderable structure. A plain `.xyz`
+(Cartesian atoms, no lattice) becomes a molecule; extended-xyz with a
+`Lattice="..."` header becomes a periodic cell.
+
+```typst
+#import "@preview/wyckoff:0.1.0": import-xyz, molecule
+#molecule(import-xyz("water.xyz"))
+```
+
+`import-poscar(path)` reads a VASP 5 `POSCAR`/`CONTCAR` (element-symbols line
+required; Direct or Cartesian coordinates; positive scale factor) and returns
+a periodic structure.
+
+```typst
+#import "@preview/wyckoff:0.1.0": import-poscar, crystal
+#crystal(import-poscar("POSCAR"))
+```
+
+`import-cif(path)` reads a CIF file (pragmatic subset). Symmetry is handled in
+priority order: an explicit `_symmetry_equiv_pos_as_xyz` /
+`_space_group_symop_operation_xyz` loop is applied directly (the path most
+database exports take); otherwise a spacegroup identifier
+(`_space_group_IT_number` or an H-M symbol) selects wyckoff's own tables to
+expand the asymmetric unit; files with neither — like partial occupancy or
+multi-block files — are rejected with an error naming the unsupported feature.
+
+```typst
+#import "@preview/wyckoff:0.1.0": import-cif, crystal
+#crystal(import-cif("nacl.cif"))
+```
+
 ## `crystal()` options
 
 ```typst
@@ -88,7 +122,7 @@ When you already have expanded coordinates, skip symmetry entirely: pass three l
 
 | Option | Default | Meaning |
 | --- | --- | --- |
-| `view` | `(azimuth: 25deg, elevation: 15deg)` | Camera orientation (orthographic). |
+| `view` | `(azimuth: 25deg, elevation: 15deg)` | Camera orientation (orthographic by default; see [Perspective camera](#perspective-camera)). |
 | `supercell` | `(1, 1, 1)` | Repetitions along a, b, c. |
 | `bonds` | `auto` | `auto`, `none`, or an array of explicit rules (below). |
 | `polyhedra` | `()` | Elements to draw coordination polyhedra around, e.g. `("Ti",)`. |
@@ -114,6 +148,63 @@ With `bonds: auto`, two atoms are bonded when their distance is at most 1.15× t
 ```
 
 The MoS₂ figure in the gallery uses exactly this rule. `bonds: none` disables bonds entirely.
+
+### Render modes
+
+`crystal()`, `crystal-group()` and `molecule()` take a `mode:` option:
+
+- `"ball-and-stick"` (default) — covalent-scale balls and two-tone sticks.
+- `"space-filling"` (alias `"cpk"`) — spheres at the van der Waals radius,
+  no bonds, no polyhedra; `radius:` scales the vdW radii (default 1.0).
+- `"licorice"` — uniform thin sticks with matching end caps; atom size is
+  independent of the element.
+
+Bonds are split at the midpoint into two atom-coloured halves by default;
+pass `bond-color: <color>` to draw each bond as a single stick in that color
+instead (ball-and-stick and licorice).
+
+<img src="images/render-modes.png" width="760">
+
+### Perspective camera
+
+The `view:` dictionary accepts `mode: "perspective"` with a `distance:` in
+Ångström (the camera's distance from the scene origin; smaller = stronger
+foreshortening, default 25):
+
+```typst
+#crystal(s, view: (azimuth: 25deg, elevation: 15deg,
+  mode: "perspective", distance: 18))
+```
+
+The default remains orthographic and is pixel-identical to earlier versions.
+
+<img src="images/perspective.png" width="760">
+
+### Large scenes: the WASM accelerator
+
+`crystal()`, `crystal-group()` and `molecule()` take `engine: "wasm"` to run
+bond detection, projection, occlusion culling, depth sorting, and translucent
+BSP splitting through the bundled `scenery-engine` WebAssembly plugin. The
+default (`engine: "typst"`) is pure Typst and renders pixel-identically on
+scenes without intersecting translucent faces; the accelerator is for large
+structures (hundreds to thousands of atoms) and for correct layering of
+interpenetrating translucent polyhedra.
+
+**Benchmark (issue #32).** `examples/benchmark.typ` renders a 1000-atom NaCl
+block — a 5×5×5 conventional-cell rock-salt slab imported as a molecule-mode
+`.xyz` (`examples/data/nacl-1000.xyz`), so bond detection runs on the full graph
+(~2700 Na–Cl bonds). Wall-clock compile times (typst 0.14.2, Apple M2, macOS 14.6):
+
+| Path | Command | Time |
+| --- | --- | --- |
+| Accelerator | `typst compile --root wyckoff --input engine=wasm  examples/benchmark.typ …` | **8.2 s** |
+| Pure Typst  | `typst compile --root wyckoff --input engine=typst examples/benchmark.typ …` | 90.0 s |
+
+The accelerator is ~11× faster here and stays well within the documented 120 s
+budget; both paths render pixel-identically (the `test-equiv` gate proves it on
+smaller scenes). The example defaults to `engine: "wasm"` so `make examples` /
+`make images` and CI stay fast; the pure-Typst reference above is compiled
+manually with `--input engine=typst`.
 
 ## Prototypes
 
@@ -153,7 +244,6 @@ Structures are generated in the **standard ITA settings with conventional cells*
 
 ## Roadmap
 
-- CIF import
 - Brillouin zone drawings
 - A WASM geometry engine as an optional accelerator for large scenes
 

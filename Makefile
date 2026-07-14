@@ -4,10 +4,13 @@
 # own Makefile exposing `test` and `examples` targets. This root Makefile fans
 # those out across every package and wires up local `@preview` resolution.
 
-.PHONY: all test examples manual pkgroot clean
+.PHONY: all test examples site-assets serve manual pkgroot plugin clean
 
 # Packages in dependency order (core first, then its consumers).
 PACKAGES := scenery wyckoff brillouin
+
+# Local preview server port for `make serve`.
+PORT ?= 8000
 
 # During development `@preview/<pkg>:<version>` must resolve to the local
 # checkout. Typst searches TYPST_PACKAGE_PATH for a `<namespace>/<name>/<version>`
@@ -28,6 +31,13 @@ pkgroot:
 check-links:
 	python3 tools/check_links.py
 
+# Build native/WASM plugins. Only wyckoff ships one today; the fan-out builds
+# each package's `plugin` target where it exists.
+plugin:
+	@$(MAKE) -C wyckoff plugin
+	@$(MAKE) -C scenery plugin
+	@echo "Plugin(s) built."
+
 test: pkgroot check-links
 	@for pkg in $(PACKAGES); do \
 	  echo "==> $$pkg: tests"; \
@@ -40,6 +50,20 @@ examples: pkgroot
 	  echo "==> $$pkg: examples"; \
 	  $(MAKE) -C $$pkg examples || exit 1; \
 	done
+
+# Regenerate the showcase site's images (site/assets/*.png) from the package
+# examples. Every asset is a page of a committed example, so the site can't
+# drift from what the code actually renders (see tools/gen_site_assets.py).
+site-assets: pkgroot
+	python3 tools/gen_site_assets.py
+	@# The interactive demo runs the SAME engine wasm Typst uses, straight in
+	@# the browser — keep site/ in sync with the committed plugin.
+	cp scenery/plugin/scenery_engine.wasm site/assets/scenery_engine.wasm
+
+# Preview the showcase site locally. Binds the first free port at or above
+# $(PORT), so a second `make serve` just lands on the next one.
+serve:
+	@python3 -u tools/serve.py $(PORT)
 
 # Showcase manual(s). Only scenery ships one today; the fan-out builds each
 # package's `manual` target where it exists.
