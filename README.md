@@ -13,7 +13,7 @@ content and compile without a Python rendering step.
 </tr>
 <tr>
 <td align="center"><a href="materia/examples/fcc-bz.typ"><img src="materia/images/fcc-bz.png" width="350" alt="An FCC Brillouin zone and high-symmetry path"></a><br><code>materia</code>: reciprocal space</td>
-<td align="center"><a href="materia/examples/co-mo.typ"><img src="materia/images/co-mo.png" width="350" alt="A carbon monoxide molecular-orbital diagram"></a><br><code>materia</code>: electronic structure</td>
+<td align="center"><a href="materia/examples/co-mo.typ"><img src="materia/images/co-mo.png" width="350" alt="A schematic carbon monoxide molecular-orbital diagram"></a><br><code>materia</code>: electronic structure</td>
 </tr>
 </table>
 

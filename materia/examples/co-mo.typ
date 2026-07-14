@@ -23,6 +23,7 @@
 
 #let model = mo-model(
   (oxygen, molecular, carbon),
+  energy-label: [Schematic energy],
   correlations: (
     correlate("o-2s", "sigma-2s"),
     correlate("o-2s", "sigma-2s-star"),

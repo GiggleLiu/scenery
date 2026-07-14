@@ -12,7 +12,7 @@ native vector content.
 <td align="center"><img src="images/fcc-bz.png" width="350" alt="FCC Brillouin zone and high-symmetry path"><br>Reciprocal space: FCC Brillouin zone</td>
 </tr>
 <tr>
-<td align="center" colspan="2"><img src="images/co-mo.png" width="620" alt="Carbon monoxide molecular-orbital correlation diagram"><br>Electronic structure: declarative CO molecular-orbital diagram</td>
+<td align="center" colspan="2"><img src="images/co-mo.png" width="620" alt="Schematic carbon monoxide molecular-orbital correlation diagram"><br>Electronic structure: declarative, schematic CO molecular-orbital diagram</td>
 </tr>
 </table>
 
@@ -143,7 +143,9 @@ bond order; it does not infer an MO scheme from a chemical formula.
 #mo-diagram(model)
 ```
 
-See [`examples/co-mo.typ`](examples/co-mo.typ) for the full CO diagram above.
+See [`examples/co-mo.typ`](examples/co-mo.typ) for the full CO diagram above. Its
+energy scale is explicitly schematic; the numeric values control layout rather
+than claiming calculated or experimental orbital energies.
 
 ## Composable scenes
 
