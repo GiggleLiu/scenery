@@ -176,9 +176,11 @@ coverage suppression and furniture (legend and crystallographic axes).
 
 ## Development
 
-From the monorepo root, `make test` compiles all tests and pixel-equivalence
-gates, while `make examples` compiles every example. The Rust parser tests run
-with `cargo test -p materia-io`.
+Development happens in the [source repository](https://github.com/GiggleLiu/scenery),
+which contains the tests and build scripts omitted from the downloadable
+package. From a monorepo checkout, `make test` compiles all tests and
+pixel-equivalence gates, while `make examples` compiles every example. The Rust
+parser tests run with `cargo test -p materia-io`.
 
 ## License
 
