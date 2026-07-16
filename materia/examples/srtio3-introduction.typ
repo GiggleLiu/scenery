@@ -2,8 +2,7 @@
 // and reciprocal-space geometry is computed by materia; the band energies are
 // deliberately simple analytic illustration data, not a first-principles result.
 #import "@preview/materia:0.1.0": prototypes, crystal, crystal-scene
-#import "@preview/materia:0.1.0": bz-scene, bz-figure, band-axis, band-panel
-#import "@preview/materia:0.1.0": reciprocal-vectors, bz-cell
+#import "@preview/materia:0.1.0": bz-figure, band-axis, band-panel
 #import "@preview/scenery:0.1.0": default-theme, render-scene
 
 // --- document language -----------------------------------------------------
@@ -84,59 +83,25 @@
 #let atom-colors = (
   Sr: blue,
   Ti: rgb("#9199a2"),
-  O: rgb("#ce8057"),
+  O: rgb("#cec857"),
 )
 #let ti-o-bonds = ((elements: ("Ti", "O"), max: 2.2),)
 #let srtio3 = prototypes.perovskite("Sr", "Ti", "O", a: a)
 
-// The structure constructor expands 1a + 1b + 3c into five atoms.
-#assert(srtio3.atoms.len() == 5,
-  message: "showcase: cubic SrTiO3 must contain five atoms")
-#assert(srtio3.group.number == 221,
-  message: "showcase: cubic SrTiO3 must use space group 221")
-
-// Build a scene value once to demonstrate the composable low-level API.
+// A scene is plain data and can be rendered directly with scenery.
 #let unit-scene = crystal-scene(
   srtio3,
   bonds: ti-o-bonds,
   polyhedra: ("Ti",),
   colors: atom-colors,
-)
-#assert(unit-scene.prims.len() > 0,
-  message: "showcase: crystal-scene returned no primitives")
-
-// The code displayed on page 1 is evaluated to make the adjacent figure.
-#let unit-code = "crystal(
-  srtio3,
-  bonds: ti-o-bonds,
-  polyhedra: (\"Ti\",),
-  colors: atom-colors,
-  labels: true,
-  width: 8.8cm,
-)"
-#let unit-scope = (
-  crystal: crystal,
-  srtio3: srtio3,
-  ti-o-bonds: ti-o-bonds,
-  atom-colors: atom-colors,
+  view: (azimuth: 45deg, elevation: 45deg),
 )
 
 // Sample the conventional primitive-cubic path. materia computes the Cartesian
 // reciprocal coordinates and cumulative distances used by the band panel.
 #let axis = band-axis("cP", lattice, path, samples: samples)
-#let reciprocal = reciprocal-vectors(lattice)
-#let zone = bz-cell(reciprocal)
-#let zone-scene = bz-scene(lattice, bravais: "cP", path: path)
-#assert(axis.k-dists.len() == (path.len() - 1) * samples + 1,
-  message: "showcase: unexpected band-axis sample count")
-#assert(axis.ticks.labels == path,
-  message: "showcase: band-axis endpoints do not match the displayed path")
-#assert(zone.vertices.len() == 8 and zone.faces.len() == 6,
-  message: "showcase: primitive-cubic Brillouin zone must be a cube")
-#assert(zone-scene.prims.len() > 0,
-  message: "showcase: bz-scene returned no primitives")
 
-// Analytic illustration data. These functions enforce VBM(R)=0 eV,
+// Analytic illustration data. These functions encode VBM(R)=0 eV,
 // CBM(Gamma)=3.25 eV, and a direct Gamma gap of 3.75 eV along this path.
 #let structure-factor(k) = (
   calc.cos(k.at(0) * a)
@@ -153,21 +118,6 @@
 #let cb-2 = axis.carts.map(k => conduction-bottom(k) + 0.28 + 0.04 * calc.cos(k.at(1) * a))
 #let cb-3 = axis.carts.map(k => conduction-bottom(k) + 0.58 - 0.05 * calc.cos(k.at(2) * a))
 #let bands = (vb-1, vb-2, vb-3, cb-1, cb-2, cb-3)
-
-#assert(bands.all(band => band.len() == axis.k-dists.len()),
-  message: "showcase: every band must match the sampled k-axis")
-#let vbm = calc.max(..vb-1)
-#let cbm = calc.min(..cb-1)
-#let r-index = 4 * samples
-#let gamma-index = 0
-#assert(calc.abs(vb-1.at(r-index) - vbm) < 1e-8,
-  message: "showcase: schematic VBM must occur at R")
-#assert(calc.abs(cb-1.at(gamma-index) - cbm) < 1e-8,
-  message: "showcase: schematic CBM must occur at Gamma")
-#assert(calc.abs((cbm - vbm) - 3.25) < 1e-8,
-  message: "showcase: indirect R-to-Gamma gap must be 3.25 eV")
-#assert(calc.abs((cb-1.at(gamma-index) - vb-1.at(gamma-index)) - 3.75) < 1e-8,
-  message: "showcase: direct Gamma gap must be 3.75 eV")
 
 #let band-theme = default-theme + (palette: (
   rgb("#b9633f"), rgb("#d08763"), rgb("#8d4b35"),
@@ -187,7 +137,14 @@
   column-gutter: 0.7cm,
   align: top,
   [
-    #align(center, eval(unit-code, mode: "code", scope: unit-scope))
+    #align(center, crystal(
+      srtio3,
+      bonds: ti-o-bonds,
+      polyhedra: ("Ti",),
+      colors: atom-colors,
+      labels: true,
+      width: 8.8cm,
+    ))
     #v(2pt)
     #align(center)[
       #text(size: 7.7pt, fill: muted)[
@@ -231,7 +188,7 @@
       #v(4pt)
       #text(size: 7.5pt, fill: muted)[
         #raw("prototypes.perovskite") expands these three sites into the five
-        atoms asserted by this document at compile time.
+        atoms of the conventional cubic cell.
       ]
     ]
   ],
@@ -244,13 +201,22 @@
   align: top,
   [
     #card(fill: copper-pale)[
-      #tag(fill: copper)[CODE = FIGURE]
+      #tag(fill: copper)[CRYSTAL FIGURE]
       #v(5pt)
-      #raw(unit-code, lang: "typ", block: true)
+      ```typ
+      #crystal(
+        srtio3,
+        bonds: ti-o-bonds,
+        polyhedra: ("Ti",),
+        colors: atom-colors,
+        labels: true,
+        width: 8.8cm,
+      )
+      ```
       #v(3pt)
       #text(size: 7.3pt, fill: muted)[
-        The listing is evaluated to produce the large figure above. Shared
-        values define the structure, bond rule, and colours once.
+        The structure, bond rule, and colours are ordinary Typst values reused
+        by the unit-cell and supercell views.
       ]
     ]
   ],
@@ -463,22 +429,6 @@
 )
 
 #v(10pt)
-#let scene-code = "let scene = crystal-scene(
-  srtio3,
-  bonds: ti-o-bonds,
-  polyhedra: (\"Ti\",),
-  colors: atom-colors,
-)
-
-render-scene(scene, scene.camera, width: 4.2cm)"
-#let scene-scope = (
-  crystal-scene: crystal-scene,
-  render-scene: render-scene,
-  srtio3: srtio3,
-  ti-o-bonds: ti-o-bonds,
-  atom-colors: atom-colors,
-)
-
 #card(fill: white)[
   #grid(
     columns: (1.2fr, 0.8fr),
@@ -487,12 +437,21 @@ render-scene(scene, scene.camera, width: 4.2cm)"
     [
       #tag[SCENE AS DATA]
       #v(5pt)
-      #raw(scene-code, lang: "typ", block: true)
+      ```typ
+      #let scene = crystal-scene(
+        srtio3,
+        bonds: ti-o-bonds,
+        polyhedra: ("Ti",),
+        colors: atom-colors,
+      )
+
+      #render-scene(scene, scene.camera, width: 4.2cm)
+      ```
     ],
     [
-      #align(center, eval(scene-code, mode: "code", scope: scene-scope))
+      #align(center, render-scene(unit-scene, unit-scene.camera, width: 4.2cm))
       #align(center)[#text(size: 7.2pt, fill: muted)[
-        The displayed listing produces this figure.
+        A scene dictionary rendered directly through #raw("scenery").
       ]]
     ],
   )
@@ -538,7 +497,7 @@ render-scene(scene, scene.camera, width: 4.2cm)"
   ],
   [
     #card(fill: blue-pale)[
-      #text(size: 9pt, weight: "bold", fill: navy)[Compile-time contracts]
+      #text(size: 9pt, weight: "bold", fill: navy)[Regression contracts]
       #v(4pt)
       #text(size: 7.7pt)[
         ✓ five expanded atoms\
@@ -548,6 +507,8 @@ render-scene(scene, scene.camera, width: 4.2cm)"
         ✓ VBM at R, CBM at Γ\
         ✓ indirect gap = 3.25 eV
       ]
+      #v(3pt)
+      #text(size: 6.9pt, fill: muted)[Checked by #raw("tests/test-srtio3-showcase.typ").]
     ]
   ],
 )

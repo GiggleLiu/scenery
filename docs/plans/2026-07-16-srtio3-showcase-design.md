@@ -74,13 +74,11 @@ and colours will be defined once near the top. Figures and displayed snippets
 will consume those values so numeric claims cannot drift between prose and
 graphics.
 
-Where practical, a small live-example helper will follow the `scenery` manual:
-the source string shown in a code panel is evaluated to produce the adjacent
-figure. Larger composite figures may use named definitions directly, but their
-copyable construction snippet must use `@preview/materia:0.1.0` and
-`@preview/scenery:0.1.0` imports.
+Figures use ordinary direct Typst calls. Copyable snippets show the same public
+API without source strings, injected scopes, or `eval`, keeping the article close
+to how a scientist would naturally use `materia` in a document.
 
-The source will contain compile-time assertions for:
+A dedicated compile-time test will assert:
 
 - five atoms in the primitive cubic cell;
 - the selected path endpoints and sample counts;
@@ -115,10 +113,10 @@ The document must explicitly distinguish:
 
 ## Failure handling
 
-The example should fail at compile time if band arrays and path samples have
-different lengths or if the expected perovskite structure is not produced.
-All package calls use public APIs. No generated PDF, test output, cache, or
-build script will enter the Universe package directory.
+The dedicated regression test should fail at compile time if band arrays and
+path samples have different lengths or if the expected perovskite structure is
+not produced. All package calls use public APIs. No generated PDF, test output,
+cache, or build script will enter the Universe package directory.
 
 ## Verification and release
 
@@ -132,4 +130,3 @@ Before updating the `materia` submission:
 5. Stage the minimal `materia:0.1.0` directory beside the merged
    `scenery:0.1.0` package and run `typst-package-check` online.
 6. Open the `materia:0.1.0` Universe PR only after every gate is green.
-
