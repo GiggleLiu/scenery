@@ -18,6 +18,18 @@ native vector content.
 
 The complete sources are in [`examples/`](examples/).
 
+## Guided showcase: SrTiO₃
+
+[`srtio3-introduction.typ`](examples/srtio3-introduction.typ) is a three-page,
+Typst-native introduction that follows one material across real, reciprocal, and
+electronic space. It constructs cubic SrTiO₃ from Wyckoff sites, exposes its
+corner-sharing TiO₆ framework, builds the primitive-cubic Brillouin zone and
+Γ–X–M–Γ–R–X path, and pairs them with an explicitly schematic band panel. The
+final page separates package-computed geometry from tabulated conventions,
+user-supplied energies, and literature claims.
+
+<a href="examples/srtio3-introduction.typ"><img src="images/srtio3-introduction.png" width="760" alt="First page of the materia SrTiO3 introduction, showing the cubic perovskite unit cell, Wyckoff sites, code, and corner-sharing octahedra"></a>
+
 ## Quick start
 
 ```typst
